@@ -1,0 +1,43 @@
+// Primary Brand Colors
+$color-lemon-yellow: #F2EA1A;
+$color-pure-white: #FFFFFF;
+$color-pure-black: #000000;
+
+// Secondary Brand Colors
+$color-warm-orange: #E75F2A;
+$color-soft-ivory: #EAEADC;
+$color-olive-charcoal: #393A31;
+
+// Neutral UI Colors
+$color-bg: #FAFAF7;
+$color-card-bg: #FFFFFF;
+$color-border: #E5E5DC;
+$color-text-primary: #1A1A1A;
+$color-text-secondary: #5A5B52;
+$color-text-muted: #8C8D82;
+
+// Functional Feedback Colors
+$color-success-bg: #F0FDF4;
+$color-success-border: #BBF7D0;
+$color-success-text: #166534;
+
+$color-danger-bg: #FEF2F2;
+$color-danger-border: #FECACA;
+$color-danger-text: #991B1B;
+
+$color-pending-bg: #FFFBEB;
+$color-pending-border: #FDE68A;
+$color-pending-text: #92400E;
+
+// Typography Tokens
+$font-heading: 'Bricolage Grotesque', sans-serif;
+$font-body: 'Outfit', sans-serif;
+
+// Radii & Transitions
+$radius-sm: 6px;
+$radius-md: 10px;
+$radius-lg: 16px;
+$radius-full: 9999px;
+
+$transition-fast: 0.15s ease;
+$transition-normal: 0.25s ease;

@@ -36,12 +36,19 @@ const userSchema = new mongoose.Schema(
       enum: Object.values(USER_STATUS),
       default: USER_STATUS.PENDING,
       index: true
+    },
+    pendingExpiresAt: {
+      type: Date,
+      default: null
     }
   },
   {
     timestamps: true
   }
 );
+
+// TTL Index: Automatically purges pending user documents after 48 hours
+userSchema.index({ pendingExpiresAt: 1 }, { expireAfterSeconds: 0 });
 
 userSchema.pre('save', async function () {
   if (!this.isModified('password')) return;

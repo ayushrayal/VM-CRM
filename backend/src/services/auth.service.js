@@ -48,7 +48,8 @@ export const registerAdmin = async ({ name, email, password, accessKey }) => {
     email,
     password,
     role: ROLES.ADMIN,
-    status: USER_STATUS.ACTIVE
+    status: USER_STATUS.ACTIVE,
+    pendingExpiresAt: null
   });
 
   const userObject = adminUser.toObject();
@@ -63,12 +64,16 @@ export const registerTeamMember = async ({ name, email, password }) => {
     throw new ApiError(400, 'An account with this email already exists.');
   }
 
+  // Set 48-hour expiration for pending team requests
+  const pendingExpiresAt = new Date(Date.now() + 48 * 60 * 60 * 1000);
+
   const teamUser = await User.create({
     name,
     email,
     password,
     role: ROLES.TEAM,
-    status: USER_STATUS.PENDING
+    status: USER_STATUS.PENDING,
+    pendingExpiresAt
   });
 
   const userObject = teamUser.toObject();

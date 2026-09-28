@@ -1,0 +1,21 @@
+@use './variables' as *;
+@use './mixins' as *;
+@use './base' as *;
+
+.app-container {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.main-content {
+  flex: 1;
+  max-width: 1200px;
+  width: 100%;
+  margin: 0 auto;
+  padding: 2rem 1.5rem;
+
+  @include mobile {
+    padding: 1.5rem 1rem;
+  }
+}

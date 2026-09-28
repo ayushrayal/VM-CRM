@@ -1,0 +1,54 @@
+@use '../../styles/variables' as *;
+
+.input-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  margin-bottom: 1.25rem;
+
+  .input-label {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: $color-pure-black;
+
+    .required-asterisk {
+      color: $color-warm-orange;
+    }
+  }
+
+  .input-field {
+    width: 100%;
+    padding: 0.65rem 0.85rem;
+    font-size: 0.95rem;
+    border: 1px solid $color-border;
+    border-radius: $radius-sm;
+    background-color: $color-pure-white;
+    color: $color-text-primary;
+    transition: border-color $transition-fast, box-shadow $transition-fast;
+
+    &:focus {
+      outline: none;
+      border-color: $color-pure-black;
+      box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.05);
+    }
+
+    &::placeholder {
+      color: $color-text-muted;
+    }
+
+    &.input-error {
+      border-color: $color-warm-orange;
+    }
+  }
+
+  .input-error-message {
+    font-size: 0.8rem;
+    color: $color-warm-orange;
+    font-weight: 500;
+  }
+
+  .input-helper-text {
+    font-size: 0.8rem;
+    color: $color-text-secondary;
+  }
+}

@@ -1,0 +1,145 @@
+@use '../../styles/variables' as *;
+@use '../../styles/mixins' as *;
+
+.top-navbar {
+  background-color: $color-pure-white;
+  border-bottom: 1px solid $color-border;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+
+  .navbar-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0.85rem 1.5rem;
+    @include flex-between;
+
+    @include mobile {
+      padding: 0.85rem 1rem;
+    }
+  }
+
+  .brand-logo {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    font-family: $font-heading;
+    font-size: 1.15rem;
+    font-weight: 800;
+    color: $color-pure-black;
+
+    .brand-dot {
+      width: 8px;
+      height: 8px;
+      background-color: $color-lemon-yellow;
+      border-radius: 50%;
+    }
+
+    .brand-sub {
+      font-size: 0.75rem;
+      font-weight: 700;
+      background-color: $color-pure-black;
+      color: $color-lemon-yellow;
+      padding: 0.1rem 0.4rem;
+      border-radius: $radius-sm;
+      margin-left: 0.15rem;
+    }
+  }
+
+  .desktop-nav {
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+
+    @include mobile {
+      display: none;
+    }
+
+    .nav-link {
+      font-size: 0.95rem;
+      font-weight: 500;
+      color: $color-text-secondary;
+      padding: 0.4rem 0.6rem;
+      border-radius: $radius-sm;
+      transition: all $transition-fast;
+
+      &:hover {
+        color: $color-pure-black;
+        background-color: $color-bg;
+      }
+
+      &.active {
+        color: $color-pure-black;
+        font-weight: 700;
+        background-color: $color-bg;
+        border-bottom: 2px solid $color-lemon-yellow;
+      }
+    }
+  }
+
+  .navbar-user-actions {
+    display: flex;
+    align-items: center;
+    gap: 1.25rem;
+
+    .user-profile-pill {
+      display: flex;
+      align-items: center;
+      gap: 0.65rem;
+
+      @include mobile {
+        display: none;
+      }
+
+      .avatar-circle {
+        width: 2.25rem;
+        height: 2.25rem;
+        border-radius: 50%;
+        background-color: $color-pure-black;
+        color: $color-lemon-yellow;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.85rem;
+        font-weight: 700;
+      }
+
+      .user-info {
+        display: flex;
+        flex-direction: column;
+        gap: 0.15rem;
+
+        .user-name {
+          font-size: 0.875rem;
+          font-weight: 600;
+          color: $color-text-primary;
+        }
+      }
+    }
+
+    .desktop-signout {
+      @include mobile {
+        display: none;
+      }
+    }
+
+    .hamburger-btn {
+      display: none;
+      flex-direction: column;
+      gap: 4px;
+      padding: 0.4rem;
+      border-radius: $radius-sm;
+
+      @include mobile {
+        display: flex;
+      }
+
+      .hamburger-line {
+        width: 20px;
+        height: 2px;
+        background-color: $color-pure-black;
+        border-radius: 2px;
+      }
+    }
+  }
+}

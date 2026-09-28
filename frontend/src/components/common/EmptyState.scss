@@ -1,0 +1,39 @@
+@use '../../styles/variables' as *;
+
+.empty-state-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 3.5rem 2rem;
+  background-color: $color-card-bg;
+  border: 1px dashed $color-border;
+  border-radius: $radius-md;
+  text-align: center;
+
+  .empty-state-icon {
+    width: 3rem;
+    height: 3rem;
+    border-radius: 50%;
+    background-color: #ECFDF5;
+    color: #10B981;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.25rem;
+    font-weight: 700;
+    margin-bottom: 1rem;
+  }
+
+  .empty-state-title {
+    font-size: 1.15rem;
+    font-weight: 700;
+    margin-bottom: 0.35rem;
+  }
+
+  .empty-state-description {
+    font-size: 0.9rem;
+    color: $color-text-secondary;
+    max-width: 360px;
+  }
+}

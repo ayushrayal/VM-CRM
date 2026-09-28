@@ -1,0 +1,112 @@
+@use 'sass:color';
+@use '../../styles/variables' as *;
+@use '../../styles/mixins' as *;
+
+.auth-page-container {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: $color-bg;
+  padding: 1.5rem;
+}
+
+.auth-card {
+  width: 100%;
+  max-width: 440px;
+  background-color: $color-card-bg;
+  border: 1px solid $color-border;
+  border-radius: $radius-md;
+  padding: 2.5rem 2rem;
+  box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.05);
+
+  @include mobile {
+    padding: 2rem 1.25rem;
+  }
+
+  .auth-brand-header {
+    text-align: center;
+    margin-bottom: 2rem;
+
+    .auth-brand-title {
+      font-size: 1.5rem;
+      font-weight: 800;
+      color: $color-pure-black;
+      letter-spacing: -0.02em;
+    }
+
+    .auth-subtitle {
+      font-size: 0.95rem;
+      color: $color-text-secondary;
+      margin-top: 0.25rem;
+    }
+  }
+
+  .auth-notice-banner {
+    background-color: $color-soft-ivory;
+    border: 1px solid $color-border;
+    color: $color-olive-charcoal;
+    padding: 0.75rem 1rem;
+    border-radius: $radius-sm;
+    font-size: 0.85rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .auth-form {
+    margin-bottom: 1.5rem;
+  }
+
+  .auth-footer-links {
+    text-align: center;
+    font-size: 0.875rem;
+    color: $color-text-secondary;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    padding-top: 1rem;
+    border-top: 1px solid $color-border;
+
+    .auth-link {
+      color: $color-pure-black;
+      font-weight: 600;
+      text-decoration: underline;
+
+      &:hover {
+        color: color.adjust($color-warm-orange, $lightness: -10%);
+      }
+    }
+  }
+
+  .auth-success-card {
+    text-align: center;
+    padding: 1rem 0;
+
+    .success-icon {
+      width: 3.5rem;
+      height: 3.5rem;
+      border-radius: 50%;
+      background-color: $color-pending-bg;
+      border: 2px solid $color-pending-border;
+      color: $color-pending-text;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.5rem;
+      font-weight: 700;
+      margin: 0 auto 1.25rem;
+    }
+
+    .success-title {
+      font-size: 1.25rem;
+      font-weight: 700;
+      margin-bottom: 0.75rem;
+    }
+
+    .success-body {
+      font-size: 0.95rem;
+      color: $color-text-secondary;
+      line-height: 1.6;
+      margin-bottom: 2rem;
+    }
+  }
+}

@@ -1,0 +1,65 @@
+@use '../../styles/variables' as *;
+
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background-color: rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(2px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 1rem;
+  animation: fadeIn 0.15s ease-out;
+}
+
+.modal-content {
+  background-color: $color-card-bg;
+  border: 1px solid $color-border;
+  border-radius: $radius-md;
+  width: 100%;
+  max-width: 480px;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+  animation: slideUp 0.15s ease-out;
+
+  .modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1.25rem 1.5rem;
+    border-bottom: 1px solid $color-border;
+
+    .modal-title {
+      font-size: 1.15rem;
+      font-weight: 700;
+    }
+
+    .modal-close {
+      font-size: 1.5rem;
+      color: $color-text-secondary;
+      line-height: 1;
+      padding: 0.2rem 0.5rem;
+      border-radius: $radius-sm;
+
+      &:hover {
+        background-color: $color-bg;
+        color: $color-pure-black;
+      }
+    }
+  }
+
+  .modal-body {
+    padding: 1.5rem;
+  }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}

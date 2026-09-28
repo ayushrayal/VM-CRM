@@ -1,0 +1,95 @@
+@use '../../styles/variables' as *;
+
+.mobile-drawer-overlay {
+  position: fixed;
+  inset: 0;
+  background-color: rgba(0, 0, 0, 0.4);
+  z-index: 200;
+  animation: fadeIn 0.15s ease-out;
+}
+
+.mobile-drawer-content {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 280px;
+  height: 100%;
+  background-color: $color-pure-white;
+  display: flex;
+  flex-direction: column;
+  padding: 1.5rem;
+  box-shadow: -5px 0 25px rgba(0, 0, 0, 0.1);
+  animation: slideLeft 0.15s ease-out;
+
+  .drawer-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid $color-border;
+
+    .drawer-brand {
+      font-family: $font-heading;
+      font-size: 0.95rem;
+      font-weight: 800;
+    }
+
+    .drawer-close {
+      font-size: 1.5rem;
+      line-height: 1;
+      color: $color-text-secondary;
+    }
+  }
+
+  .drawer-user-info {
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+    padding: 1rem 0;
+    border-bottom: 1px solid $color-border;
+
+    .drawer-user-name {
+      font-weight: 700;
+      font-size: 1rem;
+    }
+    .drawer-user-email {
+      font-size: 0.85rem;
+      color: $color-text-secondary;
+    }
+    .drawer-role-badge {
+      align-self: flex-start;
+      margin-top: 0.4rem;
+    }
+  }
+
+  .drawer-nav {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    padding: 1.25rem 0;
+    flex: 1;
+
+    .drawer-link {
+      padding: 0.65rem 0.85rem;
+      font-weight: 600;
+      font-size: 0.95rem;
+      color: $color-text-secondary;
+      border-radius: $radius-sm;
+
+      &:hover, &.active {
+        color: $color-pure-black;
+        background-color: $color-bg;
+      }
+    }
+  }
+
+  .drawer-footer {
+    padding-top: 1rem;
+    border-top: 1px solid $color-border;
+  }
+}
+
+@keyframes slideLeft {
+  from { transform: translateX(100%); }
+  to { transform: translateX(0); }
+}

@@ -1,9 +1,22 @@
 import {
+  getAllUsers,
   getPendingTeamRequests,
   approveTeamRequest,
-  rejectTeamRequest
+  rejectTeamRequest,
+  deleteUser
 } from '../services/admin.service.js';
 import { ApiResponse } from '../utils/ApiResponse.js';
+
+export const handleGetAllUsers = async (req, res, next) => {
+  try {
+    const users = await getAllUsers();
+    return res
+      .status(200)
+      .json(new ApiResponse(200, users, 'All users retrieved successfully.'));
+  } catch (error) {
+    next(error);
+  }
+};
 
 export const handleGetTeamRequests = async (req, res, next) => {
   try {
@@ -41,14 +54,31 @@ export const handleApproveTeamRequest = async (req, res, next) => {
 
 export const handleRejectTeamRequest = async (req, res, next) => {
   try {
-    const updatedUser = await rejectTeamRequest(req.params.id, req.user._id);
+    const deletedUser = await rejectTeamRequest(req.params.id, req.user._id);
     return res
       .status(200)
       .json(
         new ApiResponse(
           200,
-          updatedUser,
-          'Team member request rejected successfully.'
+          deletedUser,
+          'Team request rejected successfully.'
+        )
+      );
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const handleDeleteUser = async (req, res, next) => {
+  try {
+    const deletedUser = await deleteUser(req.params.id, req.user._id);
+    return res
+      .status(200)
+      .json(
+        new ApiResponse(
+          200,
+          deletedUser,
+          'User account deleted successfully.'
         )
       );
   } catch (error) {

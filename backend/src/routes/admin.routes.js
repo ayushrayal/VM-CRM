@@ -1,8 +1,10 @@
 import { Router } from 'express';
 import {
+  handleGetAllUsers,
   handleGetTeamRequests,
   handleApproveTeamRequest,
-  handleRejectTeamRequest
+  handleRejectTeamRequest,
+  handleDeleteUser
 } from '../controllers/admin.controller.js';
 import { authGuard } from '../middleware/auth.middleware.js';
 import { requireRole } from '../middleware/role.middleware.js';
@@ -14,6 +16,14 @@ const router = Router();
 
 // Apply authGuard and requireRole(ADMIN) globally to all admin routes
 router.use(authGuard, requireRole(ROLES.ADMIN));
+
+router.get('/users', handleGetAllUsers);
+
+router.delete(
+  '/users/:id',
+  validate(teamRequestIdParamSchema),
+  handleDeleteUser
+);
 
 router.get('/team-requests', handleGetTeamRequests);
 

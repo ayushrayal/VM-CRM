@@ -3,6 +3,20 @@ import { ROLES } from '../constants/roles.js';
 import { USER_STATUS } from '../constants/status.js';
 import { ApiError } from '../utils/ApiError.js';
 
+export const getAllUsers = async () => {
+  // Returns all admins and active team members (excludes pending requests)
+  const users = await User.find({
+    $or: [
+      { role: ROLES.ADMIN },
+      { status: USER_STATUS.ACTIVE }
+    ]
+  })
+    .select('-password')
+    .sort({ createdAt: -1 });
+
+  return users;
+};
+
 export const getPendingTeamRequests = async () => {
   const pendingUsers = await User.find({
     role: ROLES.TEAM,
@@ -33,18 +47,18 @@ export const approveTeamRequest = async (targetUserId, adminUserId) => {
     throw new ApiError(400, 'User is already active.');
   }
 
-  if (user.status === USER_STATUS.REJECTED) {
-    throw new ApiError(
-      400,
-      'User request is currently rejected. Only pending requests can be approved.'
-    );
-  }
-
   if (user.status !== USER_STATUS.PENDING) {
     throw new ApiError(400, 'Only pending team requests can be approved.');
   }
 
+  // TTL Boundary check: Ensure pending request has not expired
+  if (user.pendingExpiresAt && new Date(user.pendingExpiresAt) < new Date()) {
+    await User.findByIdAndDelete(targetUserId);
+    throw new ApiError(400, 'Team signup request has expired (48-hour limit exceeded).');
+  }
+
   user.status = USER_STATUS.ACTIVE;
+  user.pendingExpiresAt = null; // Clear TTL expiration
   await user.save();
 
   const userObject = user.toObject();
@@ -68,23 +82,36 @@ export const rejectTeamRequest = async (targetUserId, adminUserId) => {
     throw new ApiError(400, 'Cannot modify status of an admin account.');
   }
 
-  if (user.status === USER_STATUS.REJECTED) {
-    throw new ApiError(400, 'User is already rejected.');
-  }
-
-  if (user.status === USER_STATUS.ACTIVE) {
-    throw new ApiError(
-      400,
-      'User is already active. Only pending requests can be rejected.'
-    );
-  }
-
   if (user.status !== USER_STATUS.PENDING) {
     throw new ApiError(400, 'Only pending team requests can be rejected.');
   }
 
-  user.status = USER_STATUS.REJECTED;
-  await user.save();
+  // Permanent deletion on rejection
+  await User.findByIdAndDelete(targetUserId);
+
+  const userObject = user.toObject();
+  delete userObject.password;
+
+  return userObject;
+};
+
+export const deleteUser = async (targetUserId, adminUserId) => {
+  if (targetUserId.toString() === adminUserId.toString()) {
+    throw new ApiError(403, 'Admin accounts cannot be deleted.');
+  }
+
+  const user = await User.findById(targetUserId);
+
+  if (!user) {
+    throw new ApiError(404, 'User account not found.');
+  }
+
+  // Admins cannot delete any admin account
+  if (user.role === ROLES.ADMIN) {
+    throw new ApiError(403, 'Admin accounts cannot be deleted.');
+  }
+
+  await User.findByIdAndDelete(targetUserId);
 
   const userObject = user.toObject();
   delete userObject.password;
