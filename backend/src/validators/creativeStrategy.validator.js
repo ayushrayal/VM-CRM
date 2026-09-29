@@ -173,7 +173,7 @@ export const submitPerformanceAnalysisSchema = z.object({
   }),
   body: z.object({
     performanceAnalysis: z.string().optional(),
-    recommendation: z.enum(['Scale', 'Pause', 'Continue Testing', 'Other', '']).optional(),
+    recommendation: z.string().optional(),
     analysisNotes: z.string().optional()
   })
 });
@@ -183,6 +183,9 @@ export const submitLearningsSchema = z.object({
     id: z.string().regex(/^[0-9a-fA-F]{24}$/, 'Invalid record ID')
   }),
   body: z.object({
+    performanceAnalysis: z.string().optional(),
+    recommendation: z.string().optional(),
+    analysisNotes: z.string().optional(),
     angle: z.string().optional(),
     concept: z.string().optional(),
     communication: z.string().optional(),

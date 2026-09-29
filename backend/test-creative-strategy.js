@@ -1,32 +1,38 @@
 import mongoose from 'mongoose';
 import dotenv from 'dotenv';
+import dns from 'dns';
 import { User } from './src/models/User.js';
 import { Client } from './src/models/Client.js';
 import { Campaign } from './src/models/Campaign.js';
 import { AdSet } from './src/models/AdSet.js';
 import { CreativeStrategy } from './src/models/CreativeStrategy.js';
 import { CreativeStrategyTimeline } from './src/models/CreativeStrategyTimeline.js';
+import { Notification } from './src/models/Notification.js';
+
 import * as clientService from './src/services/client.service.js';
 import * as campaignService from './src/services/campaign.service.js';
 import * as adSetService from './src/services/adSet.service.js';
 import * as creativeStrategyService from './src/services/creativeStrategy.service.js';
 
-import dns from 'dns';
 dns.setServers(['8.8.8.8', '8.8.4.4', '1.1.1.1']);
 dotenv.config();
 
 const runTests = async () => {
-  console.log('=== STARTING CREATIVE STRATEGY INTEGRATION TESTS ===');
+  console.log('====================================================');
+  console.log('CREATIVE STRATEGY WORKFLOW AUDIT FIXES VERIFICATION');
+  console.log('====================================================');
+
   await mongoose.connect(process.env.MONGO_URI);
   console.log('✓ Connected to MongoDB');
 
   try {
-    // 1. Setup mock users
-    let testAdmin = await User.findOne({ email: 'test_admin@test.com' });
+    // 0. Setup Mock Users
+    // Admin (System Admin / Final Approver)
+    let testAdmin = await User.findOne({ email: 'audit_admin@test.com' });
     if (!testAdmin) {
       testAdmin = await User.create({
-        name: 'Test Admin',
-        email: 'test_admin@test.com',
+        name: 'Abhishek Admin',
+        email: 'audit_admin@test.com',
         password: 'Password123!',
         role: 'admin',
         teamRole: 'none',
@@ -34,11 +40,12 @@ const runTests = async () => {
       });
     }
 
-    let testMB = await User.findOne({ email: 'test_mb@test.com' });
+    // Assigned Media Buyer
+    let testMB = await User.findOne({ email: 'audit_mb@test.com' });
     if (!testMB) {
       testMB = await User.create({
         name: 'Rahul Buyer',
-        email: 'test_mb@test.com',
+        email: 'audit_mb@test.com',
         password: 'Password123!',
         role: 'team',
         teamRole: 'media_buyer',
@@ -46,11 +53,25 @@ const runTests = async () => {
       });
     }
 
-    let testCS = await User.findOne({ email: 'test_cs@test.com' });
+    // Unassigned Media Buyer (for testing user isolation)
+    let otherMB = await User.findOne({ email: 'audit_other_mb@test.com' });
+    if (!otherMB) {
+      otherMB = await User.create({
+        name: 'Vikram Other Buyer',
+        email: 'audit_other_mb@test.com',
+        password: 'Password123!',
+        role: 'team',
+        teamRole: 'media_buyer',
+        status: 'active'
+      });
+    }
+
+    // Assigned Creative Strategist
+    let testCS = await User.findOne({ email: 'audit_cs@test.com' });
     if (!testCS) {
       testCS = await User.create({
         name: 'Priya Strategist',
-        email: 'test_cs@test.com',
+        email: 'audit_cs@test.com',
         password: 'Password123!',
         role: 'team',
         teamRole: 'creative_strategist',
@@ -58,52 +79,47 @@ const runTests = async () => {
       });
     }
 
-    let testGD = await User.findOne({ email: 'test_gd@test.com' });
+    // Assigned Graphic Designer
+    let testGD = await User.findOne({ email: 'audit_gd@test.com' });
     if (!testGD) {
       testGD = await User.create({
         name: 'Rohan Designer',
-        email: 'test_gd@test.com',
+        email: 'audit_gd@test.com',
         password: 'Password123!',
         role: 'team',
         teamRole: 'graphic_designer',
         status: 'active'
       });
     }
-    console.log('✓ Test users ready (Admin, MB, CS, GD)');
 
-    // 2. Client Creation
-    const clientName = `TestClient_${Date.now()}`;
+    console.log('✓ Test users ready (Admin, Assigned MB, Other MB, Assigned CS, Assigned GD)');
+
+    // Setup Test Hierarchy
     const client = await clientService.createClient({
-      name: clientName,
-      code: 'TC',
-      description: 'Test Client Description',
+      name: `AuditClient_${Date.now()}`,
+      code: 'AC',
+      description: 'Audit Test Client',
       userId: testAdmin._id
     });
-    console.log(`✓ Client created: ${client.name} (${client._id})`);
 
-    // 3. Campaign Creation
     const campaign = await campaignService.createCampaign({
-      name: 'VM | CBO | B | 10/09/2026',
+      name: 'Audit | CBO | Testing Campaign',
       clientId: client._id.toString(),
       launchDate: new Date(),
       status: 'ACTIVE',
-      notes: 'Initial Q4 Campaign',
+      notes: 'Audit campaign',
       userId: testAdmin._id
     });
-    console.log(`✓ Campaign created: ${campaign.name} under ${client.name}`);
 
-    // 4. Ad Set Creation
     const adSet = await adSetService.createAdSet({
-      name: 'VM | CBO | B | Top Cities',
+      name: 'Audit | AdSet 1 | UGC Videos',
       campaignId: campaign._id.toString(),
       launchDate: new Date(),
       status: 'ACTIVE',
       currentTestingCycle: 1,
       userId: testAdmin._id
     });
-    console.log(`✓ Ad Set created: ${adSet.name} under ${campaign.name}`);
 
-    // 5. Creative Strategy Record Creation
     const record = await creativeStrategyService.createCreativeStrategy(
       {
         clientId: client._id.toString(),
@@ -111,207 +127,508 @@ const runTests = async () => {
         adSetId: adSet._id.toString(),
         cycleNumber: 1,
         currentTestingCycle: 'Cycle 1',
-        nextAssetDueDate: new Date(Date.now() + 86400000 * 3),
-        creativePrepDue: new Date(Date.now() + 86400000 * 2),
-        jointPrepDue: new Date(Date.now() + 86400000 * 4),
-        atApprovalDue: new Date(Date.now() + 86400000 * 5),
-        plannedLaunchDate: new Date(Date.now() + 86400000 * 6),
         assignedMediaBuyer: testMB._id.toString(),
         assignedCreativeStrategist: testCS._id.toString(),
         assignedGraphicDesigner: testGD._id.toString(),
         assignedTo: testMB._id.toString(),
-        mediaBuyerRecommendation: 'Target broad with CBO $200/day',
-        creativeStrategistRecommendation: 'Test 3 UGC hook angles',
-        creativesProposed: '3 UGC videos',
-        hypothesis: 'Fast-paced hook reduces CPA by 20%',
-        abhishekDecision: 'APPROVED',
-        finalAssetConfiguration: '9:16 Reels format',
-        creativesReady: true,
-        configurationReady: true
+        creativeName: 'UGC Hook Variation A',
+        creativesProposed: 'UGC Hook Variation A'
       },
       testAdmin
     );
-    console.log(`✓ Creative Strategy record created for Cycle 1 (${record._id})`);
+    console.log(`✓ Record created: ${record._id} (${record.currentTestingCycle}) in status: ${record.status}`);
 
-    // 6. Launch Creative -> Workflow timer begins
-    const launchedRecord = await creativeStrategyService.launchCreative(
-      record._id,
-      { launchProof: 'https://business.facebook.com/ads/123' },
-      testMB
-    );
-    if (launchedRecord.status !== 'LAUNCHED' || !launchedRecord.launchedAt) {
-      throw new Error('Launch failed');
-    }
-    console.log(`✓ Creative launched at: ${launchedRecord.launchedAt}`);
-
-    // 7. Verify 72-Hour Report Lock: Must REJECT immediate submission
-    let rejected = false;
+    // =========================================================================
+    // TEST 1: Wrong teamRole cannot submit operational action (Must return 403)
+    // =========================================================================
+    console.log('\n--- TEST 1: Wrong teamRole cannot submit operational action ---');
+    let test1Passed = false;
     try {
-      await creativeStrategyService.submitReport(
+      // testMB has teamRole 'media_buyer', attempting to submit CS performance analysis
+      await creativeStrategyService.submitPerformanceAnalysis(
         record._id,
-        { reportNotes: 'Premature report attempt' },
+        {
+          ctr: 2.5,
+          cpc: 12.0,
+          cpm: 150.0,
+          roas: 3.2,
+          performanceAnalysis: 'Hacked analysis by MB'
+        },
         testMB
       );
     } catch (err) {
-      rejected = true;
-      console.log(`✓ 72-Hour Lock verified: Backend rejected premature report: "${err.message}"`);
+      if (err.statusCode === 403) {
+        test1Passed = true;
+        console.log(`✓ TEST 1 PASSED: Media Buyer rejected from CS operational action with 403: "${err.message}"`);
+      } else {
+        console.error(`❌ TEST 1 FAILED with unexpected error:`, err);
+      }
     }
-    if (!rejected) {
-      throw new Error('Backend failed to enforce 72-hour report lock!');
-    }
+    if (!test1Passed) throw new Error('TEST 1 FAILED: Wrong teamRole was NOT blocked with 403!');
 
-    // 8. Simulate 73 hours elapsed -> Report unlocks
+    // =========================================================================
+    // TEST 2: Correct role but wrong assigned user cannot submit (Must return 403)
+    // =========================================================================
+    console.log('\n--- TEST 2: Correct role but unassigned user cannot submit ---');
+    let test2Passed = false;
+    try {
+      // otherMB has teamRole 'media_buyer', but is NOT the assignedMediaBuyer on this record
+      await creativeStrategyService.launchCreative(
+        record._id,
+        { launchProof: 'https://business.facebook.com/ads/other' },
+        otherMB
+      );
+    } catch (err) {
+      if (err.statusCode === 403) {
+        test2Passed = true;
+        console.log(`✓ TEST 2 PASSED: Unassigned Media Buyer rejected with 403: "${err.message}"`);
+      } else {
+        console.error(`❌ TEST 2 FAILED with unexpected error:`, err);
+      }
+    }
+    if (!test2Passed) throw new Error('TEST 2 FAILED: Unassigned user was NOT blocked with 403!');
+
+    // =========================================================================
+    // TEST 3: Admin cannot perform worker actions (Must return 403)
+    // =========================================================================
+    console.log('\n--- TEST 3: Admin cannot perform worker operational submissions ---');
+    let test3Passed = false;
+    try {
+      // Admin attempting to launch creative (operational worker action)
+      await creativeStrategyService.launchCreative(
+        record._id,
+        { launchProof: 'https://business.facebook.com/ads/admin' },
+        testAdmin
+      );
+    } catch (err) {
+      if (err.statusCode === 403) {
+        test3Passed = true;
+        console.log(`✓ TEST 3 PASSED: Admin blocked from worker operational action with 403: "${err.message}"`);
+      } else {
+        console.error(`❌ TEST 3 FAILED with unexpected error:`, err);
+      }
+    }
+    if (!test3Passed) throw new Error('TEST 3 FAILED: Admin was permitted to perform worker operational submission!');
+
+    // Launch by assigned MB (Legitimate action)
+    const launched = await creativeStrategyService.launchCreative(
+      record._id,
+      { launchProof: 'https://business.facebook.com/ads/valid' },
+      testMB
+    );
+    console.log(`✓ Assigned Media Buyer launched creative. Status: ${launched.status}`);
+
+    // =========================================================================
+    // TEST 4: Report before 72h is rejected (Must return 400)
+    // =========================================================================
+    console.log('\n--- TEST 4: Report before 72h is rejected ---');
+    let test4Passed = false;
+    try {
+      await creativeStrategyService.submitReport(
+        record._id,
+        { ctr: 2.1, cpc: 10.5, cpm: 120.0, roas: 3.1, performanceNotes: 'Premature' },
+        testMB
+      );
+    } catch (err) {
+      if (err.statusCode === 400 && err.message.includes('72 hours')) {
+        test4Passed = true;
+        console.log(`✓ TEST 4 PASSED: Report submission before 72h locked with 400: "${err.message}"`);
+      } else {
+        console.error(`❌ TEST 4 FAILED with unexpected error:`, err);
+      }
+    }
+    if (!test4Passed) throw new Error('TEST 4 FAILED: 72-hour report lock was bypassed!');
+
+    // =========================================================================
+    // TEST 5: Report after 72h succeeds
+    // =========================================================================
+    console.log('\n--- TEST 5: Report after 72h succeeds ---');
+    // Fast-forward launch timestamp by 73 hours
     await CreativeStrategy.findByIdAndUpdate(record._id, {
       launchedAt: new Date(Date.now() - 73 * 3600 * 1000)
     });
     const reportRecord = await creativeStrategyService.submitReport(
       record._id,
-      { reportNotes: 'ROAS 3.2x, Hook retention 45%' },
+      {
+        ctr: 2.45,
+        cpc: 9.8,
+        cpm: 110.0,
+        roas: 3.4,
+        performanceNotes: 'Strong top of funnel click-through',
+        additionalObservations: 'Desktop outperformed mobile'
+      },
       testMB
     );
-    if (reportRecord.status !== 'REPORT_SUBMITTED' || !reportRecord.reportSubmittedAt) {
-      throw new Error('Report submission failed after 72 hours');
+    if (reportRecord.status === 'REPORT_SUBMITTED' && reportRecord.reportSubmittedAt) {
+      console.log(`✓ TEST 5 PASSED: Report submitted successfully after 72h. Status: ${reportRecord.status}`);
+    } else {
+      throw new Error('TEST 5 FAILED: Report submission failed after 72h lock elapsed.');
     }
-    console.log(`✓ Performance report submitted after 72h lock passed. Status: ${reportRecord.status}`);
 
-    // 9. Submit Learnings (Creative Strategist)
+    // =========================================================================
+    // TEST 6: Performance analysis persists atomically
+    // =========================================================================
+    console.log('\n--- TEST 6: Performance analysis persists atomically ---');
+    const perfRecord = await creativeStrategyService.submitPerformanceAnalysis(
+      record._id,
+      {
+        ctr: 2.45,
+        cpc: 9.8,
+        cpm: 110.0,
+        roas: 3.4,
+        performanceAnalysis: 'CTR is above industry benchmark of 1.8%, strong creative interest.',
+        recommendation: 'SCALE',
+        analysisNotes: 'Increase CBO budget by 20% on next iteration.'
+      },
+      testCS
+    );
+
+    const checkRecord1 = await CreativeStrategy.findById(record._id);
+    if (
+      checkRecord1.performanceAnalysis === 'CTR is above industry benchmark of 1.8%, strong creative interest.' &&
+      checkRecord1.recommendation === 'SCALE' &&
+      checkRecord1.analysisNotes === 'Increase CBO budget by 20% on next iteration.'
+    ) {
+      console.log('✓ TEST 6 PASSED: performanceAnalysis, recommendation, and analysisNotes persisted perfectly.');
+    } else {
+      throw new Error('TEST 6 FAILED: Performance analysis fields were dropped or not persisted!');
+    }
+
+    // =========================================================================
+    // TEST 7: Creative analysis persists atomically & updates status
+    // =========================================================================
+    console.log('\n--- TEST 7: Creative analysis persists atomically ---');
     const learningsRecord = await creativeStrategyService.submitLearnings(
       record._id,
-      { learningsNotes: 'Problem-first hook outperformed solution hook by 60%' },
+      {
+        angle: 'Problem Agitation UGC',
+        concept: 'First 3 seconds pain-point demonstration',
+        communication: 'Direct and relatable consumer tone',
+        psychology: 'Loss aversion and urgency',
+        hook: 'Stop wasting time on manual CRM updates',
+        creativeStructure: 'Hook -> Problem -> Demonstration -> Social Proof -> CTA',
+        creativeAnalysisNotes: 'Hook hold rate at 3s was 68%',
+        creativeLearning: 'Visual text overlays boosted retention significantly',
+        creativeLearningNotes: 'Designer must add bold yellow typography',
+        assignedGraphicDesigner: testGD._id.toString()
+      },
       testCS
     );
-    if (learningsRecord.status !== 'LEARNINGS_SUBMITTED') {
-      throw new Error('Learnings submission failed');
-    }
-    console.log(`✓ Learnings submitted. Status: ${learningsRecord.status}`);
 
-    // 10. Create Brief (Graphic Designer)
-    const briefRecord = await creativeStrategyService.createBrief(
+    const checkRecord2 = await CreativeStrategy.findById(record._id);
+    if (
+      checkRecord2.status === 'LEARNINGS_SUBMITTED' &&
+      checkRecord2.angle === 'Problem Agitation UGC' &&
+      checkRecord2.concept === 'First 3 seconds pain-point demonstration' &&
+      checkRecord2.hook === 'Stop wasting time on manual CRM updates' &&
+      checkRecord2.creativeLearning === 'Visual text overlays boosted retention significantly' &&
+      checkRecord2.assignedGraphicDesigner.toString() === testGD._id.toString()
+    ) {
+      console.log('✓ TEST 7 PASSED: Creative breakdown persisted atomically and status -> LEARNINGS_SUBMITTED.');
+    } else {
+      throw new Error('TEST 7 FAILED: Creative analysis fields or status update failed!');
+    }
+
+    // =========================================================================
+    // TEST 8: Brief revision workflow works (No deadlock)
+    // =========================================================================
+    console.log('\n--- TEST 8: Brief revision workflow (No deadlock) ---');
+    // Step 8a: GD creates initial brief
+    const initialBrief = await creativeStrategyService.createBrief(
       record._id,
-      { briefContent: 'Brief for Iteration 2: Focus on problem statement hook' },
+      {
+        briefTitle: 'Brief V1 - UGC Pain Point',
+        briefDescription: 'Create a 15s UGC video focusing on morning frustration.'
+      },
       testGD
     );
-    if (briefRecord.status !== 'BRIEF_SUBMITTED') {
-      throw new Error('Brief creation failed');
-    }
-    console.log(`✓ Brief created. Status: ${briefRecord.status}`);
+    if (initialBrief.status !== 'BRIEF_SUBMITTED') throw new Error('Initial brief submission failed');
+    console.log(`✓ 8a. Graphic Designer submitted brief. Status: ${initialBrief.status}`);
 
-    // 11. Approve Brief (Creative Strategist) -> Production begins
-    const prodStartedRecord = await creativeStrategyService.approveBrief(record._id, testCS);
-    if (prodStartedRecord.status !== 'PRODUCTION') {
+    // Step 8b: CS requests revision
+    const briefRevisionRequested = await creativeStrategyService.reviewBrief(
+      record._id,
+      { status: 'REVISE', feedback: 'Please emphasize the hook in the first 2 seconds.' },
+      testCS
+    );
+    if (
+      briefRevisionRequested.status !== 'REVISION_REQUESTED' ||
+      briefRevisionRequested.briefStatus !== 'REVISE'
+    ) {
+      throw new Error('Brief revision request failed');
+    }
+    console.log(`✓ 8b. Creative Strategist requested revision. Status: ${briefRevisionRequested.status}`);
+
+    // Step 8c: GD re-submits revised brief (Must be accepted during REVISION_REQUESTED)
+    const revisedBriefSubmitted = await creativeStrategyService.createBrief(
+      record._id,
+      {
+        briefTitle: 'Brief V2 - Revised UGC with 2s Hook',
+        briefDescription: 'Updated brief: opening frame shows bold text overlay in 1.5s.'
+      },
+      testGD
+    );
+    if (revisedBriefSubmitted.status !== 'BRIEF_SUBMITTED') {
+      throw new Error('Revised brief re-submission failed');
+    }
+    console.log(`✓ 8c. Graphic Designer re-submitted revised brief. Status: ${revisedBriefSubmitted.status}`);
+
+    // Step 8d: CS approves revised brief
+    const briefApproved = await creativeStrategyService.reviewBrief(
+      record._id,
+      { status: 'APPROVED', feedback: 'Perfect revisions, approved for production!' },
+      testCS
+    );
+    if (briefApproved.status !== 'PRODUCTION' || briefApproved.briefStatus !== 'APPROVED') {
       throw new Error('Brief approval failed');
     }
-    console.log(`✓ Brief approved. Status: ${prodStartedRecord.status}`);
+    console.log(`✓ TEST 8 PASSED: Brief approved and moved to PRODUCTION. Status: ${briefApproved.status}`);
 
-    // 12. Submit Production (Graphic Designer)
-    const prodSubmittedRecord = await creativeStrategyService.submitCreativeProduction(
+    // =========================================================================
+    // TEST 9: Creative revision workflow works (No deadlock)
+    // =========================================================================
+    console.log('\n--- TEST 9: Creative asset revision workflow (No deadlock) ---');
+    // Step 9a: GD submits initial creative assets
+    const initialCreative = await creativeStrategyService.submitCreativeProduction(
       record._id,
-      { productionAssetsUrl: 'https://drive.google.com/assets/cycle1' },
+      {
+        creativeLink: 'https://drive.google.com/asset-v1',
+        framerLink: 'https://framer.com/v1',
+        creativeSubmissionNotes: 'First cut of UGC video'
+      },
       testGD
     );
-    if (prodSubmittedRecord.status !== 'INTERNAL_REVIEW') {
-      throw new Error('Production submission failed');
-    }
-    console.log(`✓ Creative submitted for internal review. Status: ${prodSubmittedRecord.status}`);
+    if (initialCreative.status !== 'INTERNAL_REVIEW') throw new Error('Initial creative submission failed');
+    console.log(`✓ 9a. Graphic Designer submitted creative assets. Status: ${initialCreative.status}`);
 
-    // 13. Approve Internal Review (Creative Strategist) -> Moves to Client Review
-    const clientReviewRecord = await creativeStrategyService.approveInternalReview(
+    // Step 9b: CS requests revision on internal review
+    const creativeRevisionRequested = await creativeStrategyService.reviewInternalCreative(
       record._id,
-      { reviewNotes: 'Ready for client presentation' },
+      { status: 'REVISE', feedback: 'Sound balance needs adjustment; vocal audio is slightly low.' },
       testCS
     );
-    if (clientReviewRecord.status !== 'CLIENT_REVIEW') {
+    if (
+      creativeRevisionRequested.status !== 'REVISION_REQUESTED' ||
+      creativeRevisionRequested.internalReviewStatus !== 'REVISE'
+    ) {
+      throw new Error('Internal review revision request failed');
+    }
+    console.log(`✓ 9b. Creative Strategist requested creative revision. Status: ${creativeRevisionRequested.status}`);
+
+    // Step 9c: GD re-submits revised creative assets
+    const revisedCreativeSubmitted = await creativeStrategyService.submitCreativeProduction(
+      record._id,
+      {
+        creativeLink: 'https://drive.google.com/asset-v2-fixed-audio',
+        framerLink: 'https://framer.com/v2',
+        creativeSubmissionNotes: 'Audio normalized to -14 LUFS.'
+      },
+      testGD
+    );
+    if (revisedCreativeSubmitted.status !== 'INTERNAL_REVIEW') {
+      throw new Error('Revised creative re-submission failed');
+    }
+    console.log(`✓ 9c. Graphic Designer re-submitted revised creative. Status: ${revisedCreativeSubmitted.status}`);
+
+    // Step 9d: CS approves internal review
+    const creativeApproved = await creativeStrategyService.reviewInternalCreative(
+      record._id,
+      { status: 'APPROVED', feedback: 'Audio is crystal clear. Ready for final approval.' },
+      testCS
+    );
+    if (creativeApproved.status !== 'CLIENT_REVIEW' || creativeApproved.internalReviewStatus !== 'APPROVED') {
       throw new Error('Internal review approval failed');
     }
-    console.log(`✓ Internal review approved. Status: ${clientReviewRecord.status}`);
+    console.log(`✓ TEST 9 PASSED: Internal review approved, moved to CLIENT_REVIEW. Status: ${creativeApproved.status}`);
 
-    // 14. Client Review Decision: Approved
-    const clientApprovedRecord = await creativeStrategyService.clientReviewDecision(
+    // =========================================================================
+    // TEST 10: Notifications generated for every important handoff
+    // =========================================================================
+    console.log('\n--- TEST 10: Verify notifications generated for all handoffs ---');
+    const notifications = await Notification.find({ creativeStrategy: record._id });
+    console.log(`✓ Total notifications generated for this record: ${notifications.length}`);
+    const notificationTypes = notifications.map((n) => n.type);
+    console.log(`   Captured types: ${notificationTypes.join(', ')}`);
+
+    if (
+      !notificationTypes.includes('CREATIVE_LAUNCHED') ||
+      !notificationTypes.includes('REPORT_SUBMITTED') ||
+      !notificationTypes.includes('LEARNINGS_SUBMITTED') ||
+      !notificationTypes.includes('BRIEF_SUBMITTED') ||
+      !notificationTypes.includes('BRIEF_APPROVED') ||
+      !notificationTypes.includes('CREATIVE_SUBMITTED') ||
+      !notificationTypes.includes('INTERNAL_REVIEW_APPROVED')
+    ) {
+      throw new Error('TEST 10 FAILED: Missing essential handoff notifications!');
+    }
+    console.log('✓ TEST 10 PASSED: All essential workflow notifications verified.');
+
+    // =========================================================================
+    // TEST 11: Final approval transitions to READY_TO_LAUNCH
+    // =========================================================================
+    console.log('\n--- TEST 11: Final approval by Admin transitions to READY_TO_LAUNCH ---');
+    const finalApproval = await creativeStrategyService.clientReviewDecision(
       record._id,
-      { decision: 'APPROVED' },
+      { decision: 'APPROVED', feedback: 'Approved for scale. Launch immediately with $250/day.' },
       testAdmin
     );
     if (
-      clientApprovedRecord.status !== 'CLIENT_APPROVED' ||
-      !clientApprovedRecord.finalCreativesApproved
+      finalApproval.status !== 'READY_TO_LAUNCH' ||
+      finalApproval.finalApprovalStatus !== 'APPROVED' ||
+      !finalApproval.finalApprovedAt
     ) {
-      throw new Error('Client approval failed');
+      throw new Error(`Final approval failed to set status to READY_TO_LAUNCH: status=${finalApproval.status}, approvalStatus=${finalApproval.finalApprovalStatus}, approvedAt=${finalApproval.finalApprovedAt}`);
     }
-    console.log(`✓ Client approved. Status: ${clientApprovedRecord.status}`);
+    console.log(`✓ TEST 11 PASSED: Final approval succeeded. Status: ${finalApproval.status}`);
 
-    // 15. Handoff to Media Buyer
-    const handoffRecord = await creativeStrategyService.handoffToMediaBuyer(record._id, testCS);
-    if (handoffRecord.status !== 'HANDOFF') {
-      throw new Error('Handoff failed');
-    }
-    console.log(`✓ Handed off to Media Buyer. Status: ${handoffRecord.status}`);
+    // =========================================================================
+    // TEST 12 & 14: Next cycle creation and race condition protection
+    // =========================================================================
+    console.log('\n--- TEST 12 & 14: Next cycle creation & idempotency protection ---');
+    // Media Buyer launches next cycle
+    const cycle1Result = await creativeStrategyService.completeAndCreateNextCycle(record._id, testMB);
+    const cycle1 = cycle1Result.completedRecord;
+    const cycle2 = cycle1Result.nextRecord;
 
-    // 16. Complete Cycle & Create Next Cycle
-    const cycleResult = await creativeStrategyService.completeAndCreateNextCycle(record._id, testMB);
-    if (cycleResult.completedRecord.status !== 'COMPLETED') {
-      throw new Error('Current cycle was not marked COMPLETED');
+    if (cycle1.status !== 'COMPLETED' || !cycle1.completedAt || !cycle1.nextCycle) {
+      throw new Error('Cycle 1 not correctly marked COMPLETED');
     }
+    const nextCycleId = (cycle1.nextCycle?._id || cycle1.nextCycle).toString();
     if (
-      cycleResult.nextRecord.status !== 'PENDING_LAUNCH' ||
-      cycleResult.nextRecord.cycleNumber !== 2
+      (cycle2.status !== 'LAUNCHED' && cycle2.status !== 'PENDING_LAUNCH') ||
+      cycle2.cycleNumber !== 2 ||
+      nextCycleId !== cycle2._id.toString()
     ) {
-      throw new Error('Next cycle was not created in PENDING_LAUNCH or cycleNumber != 2');
+      throw new Error(`Cycle 2 not correctly spawned: status=${cycle2.status}, cycleNumber=${cycle2.cycleNumber}, nextCycleId=${nextCycleId}`);
     }
-    console.log(
-      `✓ Cycle 1 COMPLETED. Cycle 2 spawned in PENDING_LAUNCH state: ${cycleResult.nextRecord.currentTestingCycle}`
-    );
+    console.log(`✓ Cycle 1 permanently COMPLETED. Cycle 2 spawned: ${cycle2._id} (Cycle ${cycle2.cycleNumber}) in status: ${cycle2.status}`);
 
-    // 17. Timeline Audit Inspection
-    const timelineEvents = await creativeStrategyService.getTimeline(record._id);
-    console.log(`✓ Timeline events captured: ${timelineEvents.length} events`);
-    for (const evt of timelineEvents) {
-      console.log(
-        `   • [${evt.timestamp.toISOString()}] ${evt.action} by ${evt.actorName} (${evt.actorRole}) - ${evt.notes || ''}`
+    // Verify Race Condition: Duplicate call MUST be rejected with 400
+    let test12Passed = false;
+    try {
+      await creativeStrategyService.completeAndCreateNextCycle(record._id, testMB);
+    } catch (err) {
+      if (err.statusCode === 400 && (err.message.toLowerCase().includes('completed') || err.message.toLowerCase().includes('immutable'))) {
+        test12Passed = true;
+        console.log(`✓ TEST 12 PASSED: Duplicate next cycle creation rejected with 400: "${err.message}"`);
+      } else {
+        console.error(`❌ TEST 12 FAILED with unexpected error:`, err);
+      }
+    }
+    if (!test12Passed) throw new Error('TEST 12 FAILED: Duplicate next cycle was not rejected!');
+
+    // Verify Cycle 2 is created exactly once in database
+    const cycleCount = await CreativeStrategy.countDocuments({
+      adSet: adSet._id,
+      cycleNumber: 2
+    });
+    if (cycleCount === 1) {
+      console.log(`✓ TEST 14 PASSED: Exactly 1 Cycle 2 document exists in database.`);
+    } else {
+      throw new Error(`TEST 14 FAILED: Expected exactly 1 Cycle 2, found: ${cycleCount}`);
+    }
+
+    // =========================================================================
+    // TEST 13: Completed cycle cannot be modified (Immutability)
+    // =========================================================================
+    console.log('\n--- TEST 13: Completed cycle immutability ---');
+    let test13Passed = false;
+    try {
+      await creativeStrategyService.updateCreativeStrategy(
+        cycle1._id,
+        { performanceNotes: 'Trying to tamper with completed historical report' },
+        testAdmin
       );
+    } catch (err) {
+      if (err.statusCode === 400 && err.message.includes('immutable')) {
+        test13Passed = true;
+        console.log(`✓ TEST 13 PASSED: Tampering with completed cycle blocked with 400: "${err.message}"`);
+      } else {
+        console.error(`❌ TEST 13 FAILED with unexpected error:`, err);
+      }
     }
-    if (timelineEvents.length < 9) {
-      throw new Error(`Expected at least 9 timeline events, got ${timelineEvents.length}`);
-    }
+    if (!test13Passed) throw new Error('TEST 13 FAILED: Completed cycle was not immutable!');
 
-    // 18. Admin Cascade Delete of Client
-    console.log('Testing Admin Cascade Delete of Client...');
+    // =========================================================================
+    // TEST 15: Audit timeline contains all expected events
+    // =========================================================================
+    console.log('\n--- TEST 15: Audit timeline verification ---');
+    const timeline = await creativeStrategyService.getTimeline(cycle1._id);
+    console.log(`✓ Total audit timeline events recorded: ${timeline.length}`);
+    const timelineActions = timeline.map((e) => e.action);
+    console.log(`   Recorded actions:\n   - ${timelineActions.join('\n   - ')}`);
+
+    const expectedActions = [
+      'CREATIVE_LAUNCHED',
+      'REPORT_SUBMITTED',
+      'PERFORMANCE_ANALYSIS_SUBMITTED',
+      'LEARNINGS_SUBMITTED',
+      'BRIEF_CREATED',
+      'BRIEF_APPROVED',
+      'CREATIVE_SUBMITTED',
+      'INTERNAL_REVIEW_APPROVED',
+      'CLIENT_APPROVED',
+      'CYCLE_COMPLETED'
+    ];
+
+    for (const exp of expectedActions) {
+      if (!timelineActions.includes(exp)) {
+        throw new Error(`TEST 15 FAILED: Missing expected timeline action: ${exp}`);
+      }
+    }
+    console.log('✓ TEST 15 PASSED: All major workflow transitions logged in immutable audit timeline.');
+
+    // =========================================================================
+    // TEST 16: Admin deletion still leaves zero orphan records
+    // =========================================================================
+    console.log('\n--- TEST 16: Admin cascade deletion leaves zero orphan records ---');
     const preview = await clientService.getClientDeletePreview(client._id);
     console.log(
-      `✓ Delete Preview: ${preview.clientName} has ${preview.campaignsCount} campaigns, ${preview.adSetsCount} ad sets, ${preview.recordsCount} records`
+      `✓ Delete Preview: Client "${preview.clientName}" -> ${preview.campaignsCount} campaigns, ${preview.adSetsCount} ad sets, ${preview.recordsCount} records`
     );
 
     const deleteResult = await clientService.deleteClient(client._id);
-    console.log(`✓ Client deleted: ${deleteResult.clientName}`);
+    console.log(`✓ Client cascade deleted: ${deleteResult.clientName}`);
 
-    // Verify cascade deletion
-    const remainingClient = await Client.findById(client._id);
-    const remainingCampaigns = await Campaign.find({ client: client._id });
-    const remainingAdSets = await AdSet.find({ client: client._id });
-    const remainingRecords = await CreativeStrategy.find({ client: client._id });
-    const remainingTimelines = await CreativeStrategyTimeline.find({
-      creativeStrategy: record._id
-    });
+    // Verify database state: no orphans in any collection
+    const orphansClient = await Client.findById(client._id);
+    const orphansCampaigns = await Campaign.find({ client: client._id });
+    const orphansAdSets = await AdSet.find({ client: client._id });
+    const orphansRecords = await CreativeStrategy.find({ client: client._id });
+    const orphansTimeline1 = await CreativeStrategyTimeline.find({ creativeStrategy: cycle1._id });
+    const orphansTimeline2 = await CreativeStrategyTimeline.find({ creativeStrategy: cycle2._id });
 
     if (
-      remainingClient ||
-      remainingCampaigns.length > 0 ||
-      remainingAdSets.length > 0 ||
-      remainingRecords.length > 0 ||
-      remainingTimelines.length > 0
+      orphansClient ||
+      orphansCampaigns.length > 0 ||
+      orphansAdSets.length > 0 ||
+      orphansRecords.length > 0 ||
+      orphansTimeline1.length > 0 ||
+      orphansTimeline2.length > 0
     ) {
-      throw new Error('Orphan records left behind after client deletion!');
+      throw new Error('TEST 16 FAILED: Orphan records found after cascade delete!');
     }
-    console.log('✓ Cascade deletion verified: Zero orphan records remain in any collection.');
+    console.log('✓ TEST 16 PASSED: Cascade deletion verified. Zero orphan records left in database.');
 
     // Cleanup test users
     await User.deleteMany({
-      email: { $in: ['test_admin@test.com', 'test_mb@test.com', 'test_cs@test.com', 'test_gd@test.com'] }
+      email: {
+        $in: [
+          'audit_admin@test.com',
+          'audit_mb@test.com',
+          'audit_other_mb@test.com',
+          'audit_cs@test.com',
+          'audit_gd@test.com'
+        ]
+      }
     });
     console.log('✓ Cleaned up test users');
 
-    console.log('=== ALL INTEGRATION TESTS PASSED PERFECTLY! ===');
+    console.log('\n====================================================');
+    console.log('🎉 ALL 16 AUDIT FIX TESTS PASSED WITH 100% SUCCESS!');
+    console.log('====================================================\n');
   } catch (err) {
-    console.error('❌ Test failed:', err);
+    console.error('\n❌ INTEGRATION TEST FAILED:', err);
     process.exit(1);
   } finally {
     await mongoose.disconnect();

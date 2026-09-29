@@ -145,12 +145,14 @@ router.post(
 
 router.post(
   '/:id/client-review',
+  requireRole(ROLES.ADMIN),
   validate(clientReviewDecisionSchema),
   handleClientReviewDecision
 );
 
 router.post(
   '/:id/final-approval',
+  requireRole(ROLES.ADMIN),
   validate(finalApprovalSchema),
   handleClientReviewDecision
 );
@@ -169,12 +171,14 @@ router.post(
 
 router.post(
   '/:id/pause',
+  requireRole(ROLES.ADMIN),
   validate(recordIdParamSchema),
   handlePauseCreative
 );
 
 router.post(
   '/:id/resume',
+  requireRole(ROLES.ADMIN),
   validate(recordIdParamSchema),
   handleResumeCreative
 );

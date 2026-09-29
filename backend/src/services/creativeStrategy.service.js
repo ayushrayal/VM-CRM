@@ -277,6 +277,13 @@ export const updateCreativeStrategy = async (id, updateData, user) => {
     throw new ApiError(404, 'Creative Strategy record not found');
   }
 
+  if (record.status === WORKFLOW_STATUS.COMPLETED) {
+    throw new ApiError(
+      400,
+      'Completed cycles are permanently archived and immutable. Historical data cannot be modified.'
+    );
+  }
+
   // Prevent circular parentItems
   if (updateData.parentItems) {
     updateData.parentItems = updateData.parentItems.filter(
@@ -370,6 +377,62 @@ export const updateCreativeStrategy = async (id, updateData, user) => {
 };
 
 // ==========================================
+// OPERATIONAL ACCESS VERIFICATION HELPER
+// ==========================================
+
+export const verifyOperationalAccess = (record, user, requiredTeamRole, assignmentField) => {
+  if (!user) {
+    throw new ApiError(401, 'Authentication required.');
+  }
+
+  // Admin / Final Approver actions
+  if (requiredTeamRole === 'admin') {
+    if (user.role !== 'admin') {
+      throw new ApiError(403, 'Access denied. Only an Admin / Final Approver can perform this action.');
+    }
+    return;
+  }
+
+  // Worker operational actions: Admin is strictly NOT allowed to perform worker submissions
+  if (user.role === 'admin') {
+    throw new ApiError(403, 'Admin cannot perform normal worker operational submissions.');
+  }
+
+  // Verify worker teamRole
+  if (user.teamRole !== requiredTeamRole) {
+    throw new ApiError(
+      403,
+      `Access denied. Required team role: '${requiredTeamRole}'. Your team role is '${user.teamRole || 'none'}'.`
+    );
+  }
+
+  // Verify that the authenticated user is the assigned person on this record
+  if (assignmentField) {
+    const assignedUser = record[assignmentField];
+    const assignedId = assignedUser?._id
+      ? assignedUser._id.toString()
+      : assignedUser
+      ? assignedUser.toString()
+      : null;
+    const currentUserId = user._id ? user._id.toString() : null;
+
+    if (!assignedId) {
+      throw new ApiError(
+        403,
+        `Access denied. No ${requiredTeamRole.replace(/_/g, ' ')} is assigned to this creative yet.`
+      );
+    }
+
+    if (assignedId !== currentUserId) {
+      throw new ApiError(
+        403,
+        `Access denied. You are not the assigned ${requiredTeamRole.replace(/_/g, ' ')} for this creative record.`
+      );
+    }
+  }
+};
+
+// ==========================================
 // WORKFLOW ACTIONS
 // ==========================================
 
@@ -379,8 +442,17 @@ export const launchCreative = async (id, { launchProof }, user) => {
     throw new ApiError(404, 'Record not found');
   }
 
-  if (record.status !== WORKFLOW_STATUS.PENDING_LAUNCH && record.launchedAt) {
-    throw new ApiError(400, 'Creative is already launched.');
+  if (record.status === WORKFLOW_STATUS.COMPLETED) {
+    throw new ApiError(400, 'Completed cycles are permanently archived and immutable.');
+  }
+
+  verifyOperationalAccess(record, user, 'media_buyer', 'assignedMediaBuyer');
+
+  if (record.status !== WORKFLOW_STATUS.PENDING_LAUNCH) {
+    throw new ApiError(
+      400,
+      `Cannot launch creative: record is in status '${record.status}', expected 'PENDING_LAUNCH'.`
+    );
   }
 
   const now = new Date();
@@ -399,6 +471,20 @@ export const launchCreative = async (id, { launchProof }, user) => {
     notes: `Creative launched. 72-hour observation timer started. Due at: ${record.reportDueAt.toISOString()}`
   });
 
+  // Notify assigned Creative Strategist that creative is live
+  if (record.assignedCreativeStrategist) {
+    await notificationService.createNotification({
+      recipient: record.assignedCreativeStrategist,
+      sender: user._id,
+      senderName: user.name,
+      title: 'Creative Launched — 72H Observation Clock Started',
+      message: `Creative "${record.creativeName || record.creativesProposed}" was launched by Media Buyer ${user.name} for ${record.client?.name || 'Client'}. 72-hour observation clock has started.`,
+      creativeStrategy: record._id,
+      cycleNumber: record.cycleNumber,
+      type: 'CREATIVE_LAUNCHED'
+    });
+  }
+
   const populated = await getCreativeStrategyById(record._id);
   broadcastEvent('CREATIVE_STRATEGY_UPDATED', populated);
   return populated;
@@ -412,6 +498,22 @@ export const submitReport = async (
   const record = await CreativeStrategy.findById(id).populate('client', 'name');
   if (!record) {
     throw new ApiError(404, 'Record not found');
+  }
+
+  if (record.status === WORKFLOW_STATUS.COMPLETED) {
+    throw new ApiError(400, 'Completed cycles are permanently archived and immutable.');
+  }
+
+  verifyOperationalAccess(record, user, 'media_buyer', 'assignedMediaBuyer');
+
+  if (
+    record.status !== WORKFLOW_STATUS.LAUNCHED &&
+    record.status !== WORKFLOW_STATUS.PENDING_REPORT
+  ) {
+    throw new ApiError(
+      400,
+      `Cannot submit report: record is in status '${record.status}'. Report submission is only allowed after launch.`
+    );
   }
 
   if (!record.launchedAt) {
@@ -489,6 +591,19 @@ export const submitPerformanceAnalysis = async (
     throw new ApiError(404, 'Record not found');
   }
 
+  if (record.status === WORKFLOW_STATUS.COMPLETED) {
+    throw new ApiError(400, 'Completed cycles are permanently archived and immutable.');
+  }
+
+  verifyOperationalAccess(record, user, 'creative_strategist', 'assignedCreativeStrategist');
+
+  if (record.status !== WORKFLOW_STATUS.REPORT_SUBMITTED && !record.reportSubmittedAt) {
+    throw new ApiError(
+      400,
+      'Cannot submit performance analysis before Media Buyer submits report.'
+    );
+  }
+
   const now = new Date();
   if (performanceAnalysis !== undefined) record.performanceAnalysis = performanceAnalysis.trim();
   if (recommendation !== undefined) record.recommendation = recommendation.trim();
@@ -515,6 +630,9 @@ export const submitPerformanceAnalysis = async (
 export const submitLearnings = async (
   id,
   {
+    performanceAnalysis,
+    recommendation,
+    analysisNotes,
     angle,
     concept,
     communication,
@@ -535,10 +653,36 @@ export const submitLearnings = async (
     throw new ApiError(404, 'Record not found');
   }
 
+  if (record.status === WORKFLOW_STATUS.COMPLETED) {
+    throw new ApiError(400, 'Completed cycles are permanently archived and immutable.');
+  }
+
+  verifyOperationalAccess(record, user, 'creative_strategist', 'assignedCreativeStrategist');
+
+  if (record.status !== WORKFLOW_STATUS.REPORT_SUBMITTED && !record.reportSubmittedAt) {
+    throw new ApiError(
+      400,
+      'Cannot submit creative analysis & direction before Media Buyer submits report.'
+    );
+  }
+
   const now = new Date();
   record.status = WORKFLOW_STATUS.LEARNINGS_SUBMITTED;
   record.learningsSubmittedAt = now;
   record.learningsSubmittedBy = user._id;
+
+  // Persist performance analysis fields if provided
+  if (performanceAnalysis !== undefined) {
+    record.performanceAnalysis = performanceAnalysis.trim();
+    record.performanceAnalysisSubmittedAt = now;
+    record.performanceAnalysisSubmittedBy = user._id;
+  }
+  if (recommendation !== undefined) {
+    record.recommendation = recommendation.trim();
+  }
+  if (analysisNotes !== undefined) {
+    record.analysisNotes = analysisNotes.trim();
+  }
 
   if (angle !== undefined) record.angle = angle.trim();
   if (concept !== undefined) record.concept = concept.trim();
@@ -614,6 +758,14 @@ export const assignGraphicDesigner = async (id, { designerId }, user) => {
     throw new ApiError(404, 'Record not found');
   }
 
+  if (record.status === WORKFLOW_STATUS.COMPLETED) {
+    throw new ApiError(400, 'Completed cycles are permanently archived and immutable.');
+  }
+
+  if (user.role !== 'admin') {
+    verifyOperationalAccess(record, user, 'creative_strategist', 'assignedCreativeStrategist');
+  }
+
   const designer = await User.findById(designerId);
   if (!designer) {
     throw new ApiError(404, 'Graphic designer not found');
@@ -661,6 +813,22 @@ export const createBrief = async (
   const record = await CreativeStrategy.findById(id).populate('client', 'name');
   if (!record) {
     throw new ApiError(404, 'Record not found');
+  }
+
+  if (record.status === WORKFLOW_STATUS.COMPLETED) {
+    throw new ApiError(400, 'Completed cycles are permanently archived and immutable.');
+  }
+
+  verifyOperationalAccess(record, user, 'graphic_designer', 'assignedGraphicDesigner');
+
+  if (
+    record.status !== WORKFLOW_STATUS.LEARNINGS_SUBMITTED &&
+    record.status !== WORKFLOW_STATUS.REVISION_REQUESTED
+  ) {
+    throw new ApiError(
+      400,
+      `Cannot submit brief: record is in status '${record.status}', expected 'LEARNINGS_SUBMITTED' or 'REVISION_REQUESTED'.`
+    );
   }
 
   const now = new Date();
@@ -715,6 +883,19 @@ export const reviewBrief = async (id, { status, feedback }, user) => {
   const record = await CreativeStrategy.findById(id).populate('client', 'name');
   if (!record) {
     throw new ApiError(404, 'Record not found');
+  }
+
+  if (record.status === WORKFLOW_STATUS.COMPLETED) {
+    throw new ApiError(400, 'Completed cycles are permanently archived and immutable.');
+  }
+
+  verifyOperationalAccess(record, user, 'creative_strategist', 'assignedCreativeStrategist');
+
+  if (record.status !== WORKFLOW_STATUS.BRIEF_SUBMITTED) {
+    throw new ApiError(
+      400,
+      `Cannot review brief: record is in status '${record.status}', expected 'BRIEF_SUBMITTED'.`
+    );
   }
 
   const now = new Date();
@@ -801,6 +982,26 @@ export const submitCreativeProduction = async (
     throw new ApiError(404, 'Record not found');
   }
 
+  if (record.status === WORKFLOW_STATUS.COMPLETED) {
+    throw new ApiError(400, 'Completed cycles are permanently archived and immutable.');
+  }
+
+  verifyOperationalAccess(record, user, 'graphic_designer', 'assignedGraphicDesigner');
+
+  if (
+    record.status !== WORKFLOW_STATUS.PRODUCTION &&
+    record.status !== WORKFLOW_STATUS.REVISION_REQUESTED
+  ) {
+    throw new ApiError(
+      400,
+      `Cannot submit creative: record is in status '${record.status}', expected 'PRODUCTION' or 'REVISION_REQUESTED'.`
+    );
+  }
+
+  if (record.briefStatus !== REVIEW_STATUS.APPROVED) {
+    throw new ApiError(400, 'Cannot submit creative assets before the brief has been approved.');
+  }
+
   const now = new Date();
   record.status = WORKFLOW_STATUS.INTERNAL_REVIEW;
   record.creativeSubmittedAt = now;
@@ -854,6 +1055,19 @@ export const reviewInternalCreative = async (id, { status, feedback, reviewNotes
   const record = await CreativeStrategy.findById(id).populate('client', 'name');
   if (!record) {
     throw new ApiError(404, 'Record not found');
+  }
+
+  if (record.status === WORKFLOW_STATUS.COMPLETED) {
+    throw new ApiError(400, 'Completed cycles are permanently archived and immutable.');
+  }
+
+  verifyOperationalAccess(record, user, 'creative_strategist', 'assignedCreativeStrategist');
+
+  if (record.status !== WORKFLOW_STATUS.INTERNAL_REVIEW) {
+    throw new ApiError(
+      400,
+      `Cannot review creative: record is in status '${record.status}', expected 'INTERNAL_REVIEW'.`
+    );
   }
 
   const now = new Date();
@@ -943,12 +1157,32 @@ export const clientReviewDecision = async (
     throw new ApiError(404, 'Record not found');
   }
 
+  if (record.status === WORKFLOW_STATUS.COMPLETED) {
+    throw new ApiError(400, 'Completed cycles are permanently archived and immutable.');
+  }
+
+  verifyOperationalAccess(record, user, 'admin');
+
+  if (record.status !== WORKFLOW_STATUS.CLIENT_REVIEW) {
+    throw new ApiError(
+      400,
+      `Cannot perform final approval: record is in status '${record.status}', expected 'CLIENT_REVIEW'.`
+    );
+  }
+
+  if (record.internalReviewStatus !== REVIEW_STATUS.APPROVED) {
+    throw new ApiError(
+      400,
+      'Cannot perform final approval before internal creative review is approved.'
+    );
+  }
+
   const now = new Date();
   const effectiveStatus = (decision === 'APPROVED' || status === 'APPROVED') ? 'APPROVED' : (status || decision || 'REVISE');
   const notes = feedback || revisionNotes || '';
 
   if (effectiveStatus === 'APPROVED') {
-    record.status = WORKFLOW_STATUS.CLIENT_APPROVED;
+    record.status = WORKFLOW_STATUS.READY_TO_LAUNCH;
     record.finalApprovalStatus = REVIEW_STATUS.APPROVED;
     record.finalApprovedAt = now;
     record.finalApprovedBy = user._id;
@@ -964,7 +1198,7 @@ export const clientReviewDecision = async (
       actor: user,
       action: TIMELINE_ACTION.CLIENT_APPROVED,
       stage: 'Final Approval',
-      notes: `Creative approved by ${user.name} (${getActorRole(user)}). Marked as ready for launch.`
+      notes: `Creative approved by ${user.name} (Final Approver). Marked as ready for launch.`
     });
 
     // Notify assigned Media Buyer
@@ -1025,6 +1259,10 @@ export const handoffToMediaBuyer = async (id, user) => {
     throw new ApiError(404, 'Record not found');
   }
 
+  if (record.status === WORKFLOW_STATUS.COMPLETED) {
+    throw new ApiError(400, 'Completed cycles are permanently archived and immutable.');
+  }
+
   const now = new Date();
   record.status = WORKFLOW_STATUS.HANDOFF;
   record.handoffAt = now;
@@ -1063,6 +1301,31 @@ export const completeAndCreateNextCycle = async (id, user, options = {}) => {
     throw new ApiError(404, 'Record not found');
   }
 
+  // RACE CONDITION / DUPLICATE NEXT CYCLE GUARD
+  if (currentRecord.status === WORKFLOW_STATUS.COMPLETED || currentRecord.nextCycle) {
+    throw new ApiError(
+      400,
+      'This cycle has already been completed and handed off to next cycle.'
+    );
+  }
+
+  verifyOperationalAccess(currentRecord, user, 'media_buyer', 'assignedMediaBuyer');
+
+  const allowedFinalStatuses = [
+    WORKFLOW_STATUS.CLIENT_APPROVED,
+    WORKFLOW_STATUS.READY_TO_LAUNCH,
+    WORKFLOW_STATUS.HANDOFF
+  ];
+  if (
+    !allowedFinalStatuses.includes(currentRecord.status) &&
+    currentRecord.finalApprovalStatus !== REVIEW_STATUS.APPROVED
+  ) {
+    throw new ApiError(
+      400,
+      `Cannot launch next cycle: creative has not received final approval yet (current status: ${currentRecord.status}).`
+    );
+  }
+
   const now = new Date();
   currentRecord.status = WORKFLOW_STATUS.COMPLETED;
   currentRecord.completedAt = now;
@@ -1071,7 +1334,7 @@ export const completeAndCreateNextCycle = async (id, user, options = {}) => {
   const nextTestingCycle = `Cycle ${nextCycleNum}`;
 
   // If autoLaunch is true (e.g. Media buyer records launch of next cycle), start 72h observation period
-  const isAutoLaunch = Boolean(options.autoLaunch);
+  const isAutoLaunch = options.autoLaunch !== false; // default true
   const launchedAtTime = isAutoLaunch ? now : null;
   const reportDueAtTime = isAutoLaunch ? new Date(now.getTime() + 72 * 3600 * 1000) : null;
   const initialStatus = isAutoLaunch ? WORKFLOW_STATUS.LAUNCHED : WORKFLOW_STATUS.PENDING_LAUNCH;
@@ -1136,7 +1399,21 @@ export const completeAndCreateNextCycle = async (id, user, options = {}) => {
       sender: user._id,
       senderName: user.name,
       title: `${nextTestingCycle} Launched — 72H Observation Started`,
-      message: `${nextTestingCycle} launched by ${user.name} for ${currentRecord.client?.name || 'Client'} / ${nextRecord.creativeName}. Report will unlock in 72 hours.`,
+      message: `${nextTestingCycle} launched by Media Buyer ${user.name} for ${currentRecord.client?.name || 'Client'} / ${nextRecord.creativeName}. Report will unlock in 72 hours.`,
+      creativeStrategy: nextRecord._id,
+      cycleNumber: nextRecord.cycleNumber,
+      type: 'CREATIVE_LAUNCHED'
+    });
+  }
+
+  // Notify assigned Media Buyer
+  if (nextRecord.assignedMediaBuyer) {
+    await notificationService.createNotification({
+      recipient: nextRecord.assignedMediaBuyer,
+      sender: user._id,
+      senderName: user.name,
+      title: `${nextTestingCycle} Active`,
+      message: `You successfully launched ${nextTestingCycle}. 72-hour observation clock has started.`,
       creativeStrategy: nextRecord._id,
       cycleNumber: nextRecord.cycleNumber,
       type: 'CREATIVE_LAUNCHED'
@@ -1157,6 +1434,12 @@ export const pauseCreative = async (id, user) => {
   if (!record) {
     throw new ApiError(404, 'Record not found');
   }
+
+  if (record.status === WORKFLOW_STATUS.COMPLETED) {
+    throw new ApiError(400, 'Completed cycles are permanently archived and immutable.');
+  }
+
+  verifyOperationalAccess(record, user, 'admin');
 
   record.status = WORKFLOW_STATUS.PAUSED;
   await record.save();
@@ -1180,10 +1463,16 @@ export const resumeCreative = async (id, user) => {
     throw new ApiError(404, 'Record not found');
   }
 
+  if (record.status === WORKFLOW_STATUS.COMPLETED) {
+    throw new ApiError(400, 'Completed cycles are permanently archived and immutable.');
+  }
+
+  verifyOperationalAccess(record, user, 'admin');
+
   // Restore active stage based on submitted data
   let nextStatus = WORKFLOW_STATUS.PENDING_LAUNCH;
   if (record.finalApprovalStatus === REVIEW_STATUS.APPROVED) {
-    nextStatus = WORKFLOW_STATUS.CLIENT_APPROVED;
+    nextStatus = WORKFLOW_STATUS.READY_TO_LAUNCH;
   } else if (record.internalReviewStatus === REVIEW_STATUS.APPROVED) {
     nextStatus = WORKFLOW_STATUS.CLIENT_REVIEW;
   } else if (record.creativeSubmittedAt) {

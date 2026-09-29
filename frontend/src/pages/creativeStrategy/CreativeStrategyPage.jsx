@@ -61,6 +61,7 @@ export const CreativeStrategyPage = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('ALL');
+  const [cycleFilter, setCycleFilter] = useState('ALL'); // 'ALL' | 'ACTIVE' | 'ARCHIVED'
   const [now, setNow] = useState(Date.now());
 
   // Selected Record & Drawer
@@ -345,6 +346,7 @@ export const CreativeStrategyPage = () => {
       }
       return 'Submit 72h Report (MB)';
     }
+    if (r.status === 'PENDING_REPORT') return 'Submit 72h Report (MB)';
     if (r.status === 'REPORT_SUBMITTED') return 'Analyze Performance & Write Learnings (CS)';
     if (r.status === 'LEARNINGS_SUBMITTED') return 'Create Brief (GD)';
     if (r.status === 'BRIEF_SUBMITTED') return 'Review Brief (CS)';
@@ -354,11 +356,42 @@ export const CreativeStrategyPage = () => {
     if (r.status === 'CLIENT_APPROVED' || r.status === 'READY_TO_LAUNCH' || r.status === 'HANDOFF') {
       return 'Record Launch & Start Next Cycle (MB)';
     }
+    if (r.status === 'REVISION_REQUESTED') {
+      if (r.briefStatus === 'REVISE' || r.briefStatus === 'REJECTED') {
+        return 'Revise & Re-Submit Brief (GD)';
+      }
+      return 'Revise & Re-Submit Creative Asset (GD)';
+    }
     if (r.status === 'COMPLETED') return 'Cycle Archived (Completed)';
     return 'Review Progress';
   };
 
-  // Filtered Records based on Client tab, Search, and Status
+  // Determine current active workflow owner
+  const getCurrentOwner = (r) => {
+    if (r.status === 'COMPLETED') return { role: 'None', name: 'Archived', bg: '#F1F5F9', color: '#64748B' };
+    if (r.status === 'PAUSED') return { role: 'Admin', name: 'Paused', bg: '#FEF2F2', color: '#991B1B' };
+    if (r.status === 'PENDING_LAUNCH' || r.status === 'LAUNCHED' || r.status === 'PENDING_REPORT') {
+      return { role: 'Media Buyer', name: r.assignedMediaBuyer?.name || 'Unassigned', bg: '#EFF6FF', color: '#1D4ED8' };
+    }
+    if (r.status === 'REPORT_SUBMITTED' || r.status === 'BRIEF_SUBMITTED' || r.status === 'INTERNAL_REVIEW') {
+      return { role: 'Creative Strategist', name: r.assignedCreativeStrategist?.name || 'Unassigned', bg: '#FDF4FF', color: '#A21CAF' };
+    }
+    if (r.status === 'LEARNINGS_SUBMITTED' || r.status === 'PRODUCTION') {
+      return { role: 'Graphic Designer', name: r.assignedGraphicDesigner?.name || 'Unassigned', bg: '#F0FDF4', color: '#15803D' };
+    }
+    if (r.status === 'CLIENT_REVIEW') {
+      return { role: 'Final Approver', name: 'Admin (Abhishek)', bg: '#FFFBEB', color: '#B45309' };
+    }
+    if (r.status === 'CLIENT_APPROVED' || r.status === 'READY_TO_LAUNCH' || r.status === 'HANDOFF') {
+      return { role: 'Media Buyer', name: r.assignedMediaBuyer?.name || 'Unassigned', bg: '#EFF6FF', color: '#1D4ED8' };
+    }
+    if (r.status === 'REVISION_REQUESTED') {
+      return { role: 'Graphic Designer', name: r.assignedGraphicDesigner?.name || 'Unassigned', bg: '#FFF7ED', color: '#C2410C' };
+    }
+    return { role: 'Team', name: 'Unassigned', bg: '#F4F4EE', color: '#5A5B52' };
+  };
+
+  // Filtered Records based on Client tab, Search, Cycle and Status
   const filteredRecords = useMemo(() => {
     return records.filter((r) => {
       // Client Filter
@@ -366,6 +399,10 @@ export const CreativeStrategyPage = () => {
         const cId = r.client?._id || r.client;
         if (cId !== selectedClientId) return false;
       }
+
+      // Cycle Filter
+      if (cycleFilter === 'ACTIVE' && r.status === 'COMPLETED') return false;
+      if (cycleFilter === 'ARCHIVED' && r.status !== 'COMPLETED') return false;
 
       // Status Filter
       if (statusFilter !== 'ALL' && r.status !== statusFilter) {
@@ -392,7 +429,7 @@ export const CreativeStrategyPage = () => {
 
       return true;
     });
-  }, [records, selectedClientId, statusFilter, searchTerm]);
+  }, [records, selectedClientId, cycleFilter, statusFilter, searchTerm]);
 
   // Client counts
   const clientCounts = useMemo(() => {
@@ -512,6 +549,16 @@ export const CreativeStrategyPage = () => {
 
           <select
             className="filter-select"
+            value={cycleFilter}
+            onChange={(e) => setCycleFilter(e.target.value)}
+          >
+            <option value="ALL">All Cycles</option>
+            <option value="ACTIVE">⚡ Active Cycles Only</option>
+            <option value="ARCHIVED">📁 Archived Cycles Only</option>
+          </select>
+
+          <select
+            className="filter-select"
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
           >
@@ -575,12 +622,11 @@ export const CreativeStrategyPage = () => {
                   <th>Creative</th>
                   <th>Cycle</th>
                   <th>Current Stage</th>
-                  <th>Next Action</th>
-                  <th>Media Buyer</th>
-                  <th>Creative Strategist</th>
-                  <th>Graphic Designer</th>
+                  <th>Current Owner</th>
                   <th>Launch Date</th>
-                  <th>Report Due</th>
+                  <th>72-hour Report Due</th>
+                  <th>Status</th>
+                  <th>Next Action</th>
                   <th>Actions</th>
                 </tr>
               </thead>
@@ -624,11 +670,30 @@ export const CreativeStrategyPage = () => {
                         </span>
                       </td>
 
-                      {/* Cycle */}
+                      {/* Cycle - Clear ACTIVE vs ARCHIVED distinction */}
                       <td>
-                        <span className="cycle-pill-badge">
-                          {r.currentTestingCycle || `Cycle ${r.cycleNumber || 1}`}
-                        </span>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                          <span
+                            className="cycle-pill-badge"
+                            style={{
+                              background: r.status === 'COMPLETED' ? '#F1F5F9' : '#FEF9C3',
+                              color: r.status === 'COMPLETED' ? '#64748B' : '#854D0E',
+                              borderColor: r.status === 'COMPLETED' ? '#CBD5E1' : '#FDE047',
+                              fontWeight: 700
+                            }}
+                          >
+                            {r.currentTestingCycle || `Cycle ${r.cycleNumber || 1}`}
+                          </span>
+                          {r.status === 'COMPLETED' ? (
+                            <span style={{ fontSize: '0.68rem', fontWeight: 700, color: '#64748B', display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
+                              📁 ARCHIVED
+                            </span>
+                          ) : (
+                            <span style={{ fontSize: '0.68rem', fontWeight: 700, color: '#16A34A', display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
+                              ● ACTIVE
+                            </span>
+                          )}
+                        </div>
                       </td>
 
                       {/* Current Stage Badge */}
@@ -636,33 +701,31 @@ export const CreativeStrategyPage = () => {
                         <StatusBadge status={r.status} record={r} />
                       </td>
 
-                      {/* Next Action */}
+                      {/* Current Owner */}
                       <td>
-                        <span className="next-action-text">{getNextActionText(r)}</span>
-                      </td>
-
-                      {/* Media Buyer */}
-                      <td>
-                        <span className={`assigned-avatar-pill ${!r.assignedMediaBuyer ? 'unassigned' : ''}`}>
-                          <span className="dot-avatar">MB</span>
-                          {r.assignedMediaBuyer?.name || 'Unassigned'}
-                        </span>
-                      </td>
-
-                      {/* Creative Strategist */}
-                      <td>
-                        <span className={`assigned-avatar-pill ${!r.assignedCreativeStrategist ? 'unassigned' : ''}`}>
-                          <span className="dot-avatar">CS</span>
-                          {r.assignedCreativeStrategist?.name || 'Unassigned'}
-                        </span>
-                      </td>
-
-                      {/* Graphic Designer */}
-                      <td>
-                        <span className={`assigned-avatar-pill ${!r.assignedGraphicDesigner ? 'unassigned' : ''}`}>
-                          <span className="dot-avatar">GD</span>
-                          {r.assignedGraphicDesigner?.name || 'Unassigned'}
-                        </span>
+                        {(() => {
+                          const owner = getCurrentOwner(r);
+                          return (
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                              <span style={{ fontSize: '0.72rem', fontWeight: 700, color: '#8C8D82', textTransform: 'uppercase' }}>
+                                {owner.role}
+                              </span>
+                              <span
+                                style={{
+                                  fontSize: '0.78rem',
+                                  fontWeight: 600,
+                                  padding: '2px 8px',
+                                  borderRadius: '4px',
+                                  width: 'fit-content',
+                                  background: owner.bg,
+                                  color: owner.color
+                                }}
+                              >
+                                {owner.name}
+                              </span>
+                            </div>
+                          );
+                        })()}
                       </td>
 
                       {/* Launch Date */}
@@ -670,7 +733,7 @@ export const CreativeStrategyPage = () => {
                         {formatDate(r.launchedAt || r.launchDate)}
                       </td>
 
-                      {/* Next Report Due */}
+                      {/* 72-hour Report Due */}
                       <td>
                         {r.status === 'LAUNCHED' && r.reportDueAt ? (
                           <div className="report-due-indicator">
@@ -688,6 +751,16 @@ export const CreativeStrategyPage = () => {
                         ) : (
                           <span style={{ color: '#8C8D82' }}>—</span>
                         )}
+                      </td>
+
+                      {/* Status */}
+                      <td>
+                        <StatusBadge status={r.status} />
+                      </td>
+
+                      {/* Next Action */}
+                      <td>
+                        <span className="next-action-text">{getNextActionText(r)}</span>
                       </td>
 
                       {/* Actions */}

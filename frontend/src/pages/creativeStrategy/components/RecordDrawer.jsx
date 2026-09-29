@@ -192,7 +192,7 @@ export const RecordDrawer = ({
   // Calculate current stage index (1-12)
   let currentStageStep = 1;
   if (record.status === 'PENDING_LAUNCH') currentStageStep = 1;
-  else if (record.status === 'LAUNCHED') currentStageStep = 2;
+  else if (record.status === 'LAUNCHED' || record.status === 'PENDING_REPORT') currentStageStep = 2;
   else if (record.status === 'REPORT_SUBMITTED') {
     if (!record.performanceAnalysis) currentStageStep = 3;
     else if (!record.creativeLearning) currentStageStep = 4;
@@ -204,15 +204,22 @@ export const RecordDrawer = ({
   else if (record.status === 'CLIENT_REVIEW') currentStageStep = 10;
   else if (record.status === 'CLIENT_APPROVED' || record.status === 'READY_TO_LAUNCH' || record.status === 'HANDOFF') currentStageStep = 11;
   else if (record.status === 'COMPLETED') currentStageStep = 12;
+  else if (record.status === 'REVISION_REQUESTED') {
+    if (record.briefStatus === 'REVISE' || record.briefStatus === 'REJECTED') {
+      currentStageStep = 6;
+    } else {
+      currentStageStep = 8;
+    }
+  }
 
   // Role permissions
   const assignedMBId = record.assignedMediaBuyer?._id || record.assignedMediaBuyer;
   const assignedCSId = record.assignedCreativeStrategist?._id || record.assignedCreativeStrategist;
   const assignedGDId = record.assignedGraphicDesigner?._id || record.assignedGraphicDesigner;
 
-  const isAssignedMB = isMediaBuyer && (!assignedMBId || assignedMBId === user?._id);
-  const isAssignedCS = isCreativeStrategist && (!assignedCSId || assignedCSId === user?._id);
-  const isAssignedGD = isGraphicDesigner && (!assignedGDId || assignedGDId === user?._id);
+  const isAssignedMB = isMediaBuyer && assignedMBId && assignedMBId.toString() === user?._id?.toString();
+  const isAssignedCS = isCreativeStrategist && assignedCSId && assignedCSId.toString() === user?._id?.toString();
+  const isAssignedGD = isGraphicDesigner && assignedGDId && assignedGDId.toString() === user?._id?.toString();
 
   // Workflow Handlers
   const handleLaunchInitial = async () => {
@@ -273,6 +280,9 @@ export const RecordDrawer = ({
       setIsProcessing(true);
       setActionError('');
       const updated = await submitLearnings(record._id, {
+        performanceAnalysis: performanceAnalysisInput,
+        recommendation: recommendationInput,
+        analysisNotes: analysisNotesInput,
         angle: angleInput,
         concept: conceptInput,
         communication: communicationInput,
@@ -649,7 +659,7 @@ export const RecordDrawer = ({
                       value={launchProofInput}
                       onChange={(e) => setLaunchProofInput(e.target.value)}
                       placeholder="e.g. https://adsmanager.facebook.com/..."
-                      disabled={!isAssignedMB && !isAdmin}
+                      disabled={!isAssignedMB}
                     />
                   </div>
                   {isAssignedMB ? (
@@ -853,6 +863,18 @@ export const RecordDrawer = ({
                       disabled={!isAssignedCS}
                     />
                   </div>
+                  {isAssignedCS && (
+                    <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '14px' }}>
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        onClick={handleSavePerformanceAnalysis}
+                        disabled={isProcessing}
+                      >
+                        {isProcessing ? 'Saving...' : '💾 Save Performance Analysis'}
+                      </Button>
+                    </div>
+                  )}
 
                   {/* Creative Analysis (Separate Fields!) */}
                   <h4 style={{ fontSize: '0.85rem', fontWeight: 700, color: '#000000', margin: '20px 0 10px', textTransform: 'uppercase' }}>
@@ -961,7 +983,7 @@ export const RecordDrawer = ({
                       <select
                         value={assignedDesignerInput}
                         onChange={(e) => setAssignedDesignerInput(e.target.value)}
-                        disabled={!isAssignedCS && !isAdmin}
+                        disabled={!isAssignedCS}
                       >
                         <option value="">Select Graphic Designer...</option>
                         {graphicDesigners.map((gd) => (
@@ -1011,65 +1033,87 @@ export const RecordDrawer = ({
                     </div>
                   )}
 
-                  {record.status === 'LEARNINGS_SUBMITTED' || !record.briefSubmittedAt ? (
-                    <div>
-                      <div className="field-group">
-                        <label>Brief Title *</label>
-                        <input
-                          type="text"
-                          value={briefTitleInput}
-                          onChange={(e) => setBriefTitleInput(e.target.value)}
-                          placeholder="e.g. Iteration 2: Focus on Problem Hook with UGC split screen"
-                          disabled={!isAssignedGD}
-                        />
-                      </div>
-                      <div className="field-group">
-                        <label>Brief Description *</label>
-                        <textarea
-                          rows={4}
-                          value={briefDescriptionInput}
-                          onChange={(e) => setBriefDescriptionInput(e.target.value)}
-                          placeholder="Asset specifications, dimensions, framing, typography..."
-                          disabled={!isAssignedGD}
-                        />
-                      </div>
-                      <div className="field-group">
-                        <label>Attachment / Reference Link (optional)</label>
-                        <input
-                          type="text"
-                          value={briefAttachmentInput}
-                          onChange={(e) => setBriefAttachmentInput(e.target.value)}
-                          placeholder="https://..."
-                          disabled={!isAssignedGD}
-                        />
-                      </div>
+                  {(() => {
+                    const isBriefRevisionRequested = record.status === 'REVISION_REQUESTED' && (record.briefStatus === 'REVISE' || record.briefStatus === 'REJECTED');
+                    const isBriefEditable = record.status === 'LEARNINGS_SUBMITTED' || isBriefRevisionRequested || !record.briefSubmittedAt;
 
-                      {isAssignedGD ? (
-                        <Button variant="primary" onClick={handleSubmitBrief} disabled={isProcessing}>
-                          {isProcessing ? 'Submitting Brief...' : 'Submit Brief for Review'}
-                        </Button>
-                      ) : (
-                        <div style={{ fontSize: '0.8rem', color: '#8C8D82' }}>
-                          Waiting for assigned Graphic Designer ({record.assignedGraphicDesigner?.name || 'Unassigned'}) to create the brief.
+                    if (isBriefEditable) {
+                      return (
+                        <div>
+                          {isBriefRevisionRequested && (
+                            <div className="warning-alert-box" style={{ marginBottom: '14px' }}>
+                              <strong>Brief Revision Requested by Strategist:</strong>
+                              <p style={{ margin: '4px 0 0', fontSize: '0.85rem' }}>
+                                {record.briefReviewFeedback || record.revisionNotes || 'Please revise the brief based on the feedback above.'}
+                              </p>
+                            </div>
+                          )}
+
+                          <div className="field-group">
+                            <label>Brief Title *</label>
+                            <input
+                              type="text"
+                              value={briefTitleInput}
+                              onChange={(e) => setBriefTitleInput(e.target.value)}
+                              placeholder="e.g. Iteration 2: Focus on Problem Hook with UGC split screen"
+                              disabled={!isAssignedGD}
+                            />
+                          </div>
+                          <div className="field-group">
+                            <label>Brief Description *</label>
+                            <textarea
+                              rows={4}
+                              value={briefDescriptionInput}
+                              onChange={(e) => setBriefDescriptionInput(e.target.value)}
+                              placeholder="Asset specifications, dimensions, framing, typography..."
+                              disabled={!isAssignedGD}
+                            />
+                          </div>
+                          <div className="field-group">
+                            <label>Attachment / Reference Link (optional)</label>
+                            <input
+                              type="text"
+                              value={briefAttachmentInput}
+                              onChange={(e) => setBriefAttachmentInput(e.target.value)}
+                              placeholder="https://..."
+                              disabled={!isAssignedGD}
+                            />
+                          </div>
+
+                          {isAssignedGD ? (
+                            <Button variant="primary" onClick={handleSubmitBrief} disabled={isProcessing}>
+                              {isProcessing
+                                ? 'Submitting Brief...'
+                                : isBriefRevisionRequested
+                                ? '↺ Re-Submit Revised Brief'
+                                : 'Submit Brief for Review'}
+                            </Button>
+                          ) : (
+                            <div style={{ fontSize: '0.8rem', color: '#8C8D82' }}>
+                              Waiting for assigned Graphic Designer ({record.assignedGraphicDesigner?.name || 'Unassigned'}) to create the brief.
+                            </div>
+                          )}
                         </div>
-                      )}
-                    </div>
-                  ) : (
-                    <div style={{ background: '#FAFAF7', border: '1px solid #E5E5DC', borderRadius: '8px', padding: '12px' }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                        <strong style={{ fontSize: '0.9rem' }}>{record.briefTitle || 'Submitted Brief'}</strong>
-                        <span className="status-badge status-purple">Submitted {formatDate(record.briefSubmittedAt)}</span>
+                      );
+                    }
+
+                    return (
+                      <div style={{ background: '#FAFAF7', border: '1px solid #E5E5DC', borderRadius: '8px', padding: '12px' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                          <strong style={{ fontSize: '0.9rem' }}>{record.briefTitle || 'Submitted Brief'}</strong>
+                          <span className="status-badge status-purple">Submitted {formatDate(record.briefSubmittedAt)}</span>
+                        </div>
+                        <p style={{ margin: '0 0 8px', fontSize: '0.85rem', color: '#393A31', whiteSpace: 'pre-line' }}>
+                          {record.briefDescription || record.briefContent}
+                        </p>
+                        {record.briefAttachment && (
+                          <div style={{ fontSize: '0.8rem' }}>
+                            Attachment: <a href={record.briefAttachment} target="_blank" rel="noreferrer">{record.briefAttachment}</a>
+                          </div>
+                        )}
                       </div>
-                      <p style={{ margin: '0 0 8px', fontSize: '0.85rem', color: '#393A31', whiteSpace: 'pre-line' }}>
-                        {record.briefDescription || record.briefContent}
-                      </p>
-                      {record.briefAttachment && (
-                        <div style={{ fontSize: '0.8rem' }}>
-                          Attachment: <a href={record.briefAttachment} target="_blank" rel="noreferrer">{record.briefAttachment}</a>
-                        </div>
-                      )}
-                    </div>
-                  )}
+                    );
+                  })()}
                 </div>
               )}
 
@@ -1136,93 +1180,120 @@ export const RecordDrawer = ({
               {/* ---------------------------------------------------- */}
               {/* STAGE 8: CREATIVE PRODUCTION SUBMISSION */}
               {/* ---------------------------------------------------- */}
-              {(record.status === 'PRODUCTION' || record.creativeSubmittedAt) && (
+              {(record.status === 'PRODUCTION' || record.creativeSubmittedAt || (record.status === 'REVISION_REQUESTED' && record.briefStatus === 'APPROVED')) && (
                 <div className="operational-action-card">
                   <div className="action-card-header">
                     <h3 className="card-title">Stage 8: Creative Submission</h3>
                     <span className="card-role-tag">Graphic Designer</span>
                   </div>
 
-                  {record.status === 'PRODUCTION' ? (
-                    <div>
-                      <div className="fields-grid-2">
-                        <div className="field-group">
-                          <label>Creative Asset Link (Drive / Dropbox / CDN) *</label>
-                          <input
-                            type="text"
-                            value={creativeLinkInput}
-                            onChange={(e) => setCreativeLinkInput(e.target.value)}
-                            placeholder="https://drive.google.com/..."
-                            disabled={!isAssignedGD}
-                          />
-                        </div>
-                        <div className="field-group">
-                          <label>Framer Link (Optional)</label>
-                          <input
-                            type="text"
-                            value={framerLinkInput}
-                            onChange={(e) => setFramerLinkInput(e.target.value)}
-                            placeholder="https://framer.com/..."
-                            disabled={!isAssignedGD}
-                          />
-                        </div>
-                      </div>
-                      <div className="field-group">
-                        <label>Attachment URL / Additional Links</label>
-                        <input
-                          type="text"
-                          value={creativeAttachmentInput}
-                          onChange={(e) => setCreativeAttachmentInput(e.target.value)}
-                          placeholder="https://..."
-                          disabled={!isAssignedGD}
-                        />
-                      </div>
-                      <div className="field-group">
-                        <label>Designer Notes</label>
-                        <textarea
-                          rows={2}
-                          value={creativeSubmissionNotesInput}
-                          onChange={(e) => setCreativeSubmissionNotesInput(e.target.value)}
-                          placeholder="Notes on variations, resolution, audio track..."
-                          disabled={!isAssignedGD}
-                        />
-                      </div>
+                  {(() => {
+                    const isCreativeRevisionRequested = record.status === 'REVISION_REQUESTED' && (
+                      record.internalReviewStatus === 'REVISE' ||
+                      record.internalReviewStatus === 'REJECTED' ||
+                      record.finalApprovalStatus === 'REVISE' ||
+                      record.finalApprovalStatus === 'REJECTED'
+                    );
+                    const isCreativeEditable = record.status === 'PRODUCTION' || isCreativeRevisionRequested;
 
-                      {isAssignedGD ? (
-                        <Button variant="primary" onClick={handleSubmitCreativeAssets} disabled={isProcessing}>
-                          {isProcessing ? 'Submitting Creative...' : 'Submit Creative for Internal Review'}
-                        </Button>
-                      ) : (
-                        <div style={{ fontSize: '0.8rem', color: '#8C8D82' }}>
-                          Waiting for assigned Graphic Designer ({record.assignedGraphicDesigner?.name || 'Unassigned'}) to submit creative assets.
+                    if (isCreativeEditable) {
+                      return (
+                        <div>
+                          {isCreativeRevisionRequested && (
+                            <div className="warning-alert-box" style={{ marginBottom: '14px' }}>
+                              <strong>Creative Revision Requested:</strong>
+                              <p style={{ margin: '4px 0 0', fontSize: '0.85rem' }}>
+                                {record.internalReviewFeedback || record.finalApprovalFeedback || record.revisionNotes || 'Please revise creative assets according to the feedback.'}
+                              </p>
+                            </div>
+                          )}
+
+                          <div className="fields-grid-2">
+                            <div className="field-group">
+                              <label>Creative Asset Link (Drive / Dropbox / CDN) *</label>
+                              <input
+                                type="text"
+                                value={creativeLinkInput}
+                                onChange={(e) => setCreativeLinkInput(e.target.value)}
+                                placeholder="https://drive.google.com/..."
+                                disabled={!isAssignedGD}
+                              />
+                            </div>
+                            <div className="field-group">
+                              <label>Framer Link (Optional)</label>
+                              <input
+                                type="text"
+                                value={framerLinkInput}
+                                onChange={(e) => setFramerLinkInput(e.target.value)}
+                                placeholder="https://framer.com/..."
+                                disabled={!isAssignedGD}
+                              />
+                            </div>
+                          </div>
+                          <div className="field-group">
+                            <label>Attachment URL / Additional Links</label>
+                            <input
+                              type="text"
+                              value={creativeAttachmentInput}
+                              onChange={(e) => setCreativeAttachmentInput(e.target.value)}
+                              placeholder="https://..."
+                              disabled={!isAssignedGD}
+                            />
+                          </div>
+                          <div className="field-group">
+                            <label>Designer Notes</label>
+                            <textarea
+                              rows={2}
+                              value={creativeSubmissionNotesInput}
+                              onChange={(e) => setCreativeSubmissionNotesInput(e.target.value)}
+                              placeholder="Notes on variations, resolution, audio track..."
+                              disabled={!isAssignedGD}
+                            />
+                          </div>
+
+                          {isAssignedGD ? (
+                            <Button variant="primary" onClick={handleSubmitCreativeAssets} disabled={isProcessing}>
+                              {isProcessing
+                                ? 'Submitting Creative...'
+                                : isCreativeRevisionRequested
+                                ? '↺ Re-Submit Revised Creative Assets'
+                                : 'Submit Creative for Internal Review'}
+                            </Button>
+                          ) : (
+                            <div style={{ fontSize: '0.8rem', color: '#8C8D82' }}>
+                              Waiting for assigned Graphic Designer ({record.assignedGraphicDesigner?.name || 'Unassigned'}) to submit creative assets.
+                            </div>
+                          )}
                         </div>
-                      )}
-                    </div>
-                  ) : (
-                    <div style={{ background: '#FAFAF7', border: '1px solid #E5E5DC', borderRadius: '8px', padding: '12px' }}>
-                      <div style={{ marginBottom: '8px', fontSize: '0.85rem' }}>
-                        <strong>Creative Asset:</strong>{' '}
-                        {record.creativeLink || record.productionAssetsUrl ? (
-                          <a href={record.creativeLink || record.productionAssetsUrl} target="_blank" rel="noreferrer" style={{ fontWeight: 600 }}>
-                            Open Creative Asset ↗
-                          </a>
-                        ) : 'N/A'}
-                      </div>
-                      {record.framerLink && (
+                      );
+                    }
+
+                    return (
+                      <div style={{ background: '#FAFAF7', border: '1px solid #E5E5DC', borderRadius: '8px', padding: '12px' }}>
                         <div style={{ marginBottom: '8px', fontSize: '0.85rem' }}>
-                          <strong>Framer Preview:</strong>{' '}
-                          <a href={record.framerLink} target="_blank" rel="noreferrer" style={{ fontWeight: 600 }}>
-                            Open Framer Preview ↗
-                          </a>
+                          <strong>Creative Asset:</strong>{' '}
+                          {record.creativeLink || record.productionAssetsUrl ? (
+                            <a href={record.creativeLink || record.productionAssetsUrl} target="_blank" rel="noreferrer" style={{ fontWeight: 600 }}>
+                              Open Creative Asset ↗
+                            </a>
+                          ) : 'N/A'}
                         </div>
-                      )}
-                      {record.creativeSubmissionNotes && (
-                        <div style={{ fontSize: '0.8rem', color: '#5A5B52' }}>
-                          Notes: {record.creativeSubmissionNotes}
-                        </div>
-                      )}
-                    </div>
-                  )}
+                        {record.framerLink && (
+                          <div style={{ marginBottom: '8px', fontSize: '0.85rem' }}>
+                            <strong>Framer Preview:</strong>{' '}
+                            <a href={record.framerLink} target="_blank" rel="noreferrer" style={{ fontWeight: 600 }}>
+                              Open Framer Preview ↗
+                            </a>
+                          </div>
+                        )}
+                        {record.creativeSubmissionNotes && (
+                          <div style={{ fontSize: '0.8rem', color: '#5A5B52' }}>
+                            Notes: {record.creativeSubmissionNotes}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })()}
                 </div>
               )}
 
@@ -1374,7 +1445,7 @@ export const RecordDrawer = ({
                     </a>
                   </div>
 
-                  {isAssignedMB || isAdmin ? (
+                  {isAssignedMB ? (
                     <Button variant="primary" onClick={handleRecordNextCycleLaunch} disabled={isProcessing}>
                       {isProcessing ? 'Launching Next Cycle...' : `🚀 Record Launch & Start Cycle ${(record.cycleNumber || 1) + 1}`}
                     </Button>
