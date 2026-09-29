@@ -5,10 +5,12 @@ import {
   getTeamRequestsApi,
   approveTeamRequestApi,
   rejectTeamRequestApi,
-  deleteUserApi
+  deleteUserApi,
+  updateUserTeamRoleApi
 } from '../../api/admin.api';
 import { UserCard } from './UserCard';
 import { RequestCard } from './RequestCard';
+import { AssignRoleModal } from './AssignRoleModal';
 import { LoadingSpinner } from '../../components/common/LoadingSpinner';
 import { EmptyState } from '../../components/common/EmptyState';
 import { AlertBanner } from '../../components/common/AlertBanner';
@@ -33,6 +35,10 @@ export const UserManagement = () => {
 
   const [deleteModalData, setDeleteModalData] = useState(null); // user object to delete
   const [isDeleting, setIsDeleting] = useState(false);
+
+  // Role Assignment states
+  const [roleModalData, setRoleModalData] = useState(null); // user object to assign role
+  const [isSavingRole, setIsSavingRole] = useState(false);
 
   const fetchData = async () => {
     try {
@@ -138,6 +144,37 @@ export const UserManagement = () => {
     }
   };
 
+  // Role Assignment Flow: update functional team role
+  const handleSaveRole = async (userId, newRole) => {
+    try {
+      setIsSavingRole(true);
+      setFeedback(null);
+      const res = await updateUserTeamRoleApi(userId, newRole);
+      if (res.success) {
+        setAllUsers((prev) =>
+          prev.map((u) => (u._id === userId ? { ...u, teamRole: newRole } : u))
+        );
+        setFeedback({
+          type: 'success',
+          message: 'Team role updated successfully.'
+        });
+        setRoleModalData(null);
+      } else {
+        setFeedback({
+          type: 'error',
+          message: res.message || 'Unable to update team role. Please try again.'
+        });
+      }
+    } catch (err) {
+      setFeedback({
+        type: 'error',
+        message: err.message || 'Unable to update team role. Please try again.'
+      });
+    } finally {
+      setIsSavingRole(false);
+    }
+  };
+
   // Separate allUsers into Admin Users and Team Members
   const adminUsers = allUsers.filter((u) => u.role === 'admin');
   const teamUsers = allUsers.filter((u) => u.role === 'team' && u.status === 'active');
@@ -226,6 +263,7 @@ export const UserManagement = () => {
                   <UserCard
                     key={teamObj._id}
                     user={teamObj}
+                    onRoleClick={(u) => setRoleModalData(u)}
                     onDeleteClick={(u) => setDeleteModalData(u)}
                     isCurrentAdmin={teamObj._id === currentUser?._id}
                   />
@@ -319,6 +357,15 @@ export const UserManagement = () => {
           </div>
         </div>
       </Modal>
+
+      {/* Assign Team Role Modal */}
+      <AssignRoleModal
+        isOpen={!!roleModalData}
+        onClose={() => !isSavingRole && setRoleModalData(null)}
+        user={roleModalData}
+        onSave={handleSaveRole}
+        isSaving={isSavingRole}
+      />
     </div>
   );
 };

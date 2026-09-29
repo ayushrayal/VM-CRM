@@ -3,7 +3,9 @@ import {
   getPendingTeamRequests,
   approveTeamRequest,
   rejectTeamRequest,
-  deleteUser
+  deleteUser,
+  updateUserTeamRole,
+  getTeamMembersByRole
 } from '../services/admin.service.js';
 import { ApiResponse } from '../utils/ApiResponse.js';
 
@@ -85,3 +87,28 @@ export const handleDeleteUser = async (req, res, next) => {
     next(error);
   }
 };
+
+export const handleUpdateUserTeamRole = async (req, res, next) => {
+  try {
+    const { teamRole } = req.body;
+    const updated = await updateUserTeamRole(req.params.id, teamRole);
+    return res
+      .status(200)
+      .json(new ApiResponse(200, updated, 'User team role updated successfully.'));
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const handleGetTeamMembers = async (req, res, next) => {
+  try {
+    const { role } = req.query;
+    const members = await getTeamMembersByRole(role);
+    return res
+      .status(200)
+      .json(new ApiResponse(200, members, 'Team members retrieved successfully.'));
+  } catch (error) {
+    next(error);
+  }
+};
+

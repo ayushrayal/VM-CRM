@@ -36,6 +36,14 @@ export const MobileNavDrawer = ({ isOpen, onClose, user, isAdmin, onSignout }) =
             Dashboard
           </NavLink>
 
+          <NavLink
+            to="/creative-strategy"
+            className={({ isActive }) => `drawer-link ${isActive ? 'active' : ''}`}
+            onClick={onClose}
+          >
+            Creative Strategy
+          </NavLink>
+
           {isAdmin && (
             <NavLink
               to="/user-management"

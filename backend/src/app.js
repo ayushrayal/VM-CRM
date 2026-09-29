@@ -5,6 +5,11 @@ import cookieParser from 'cookie-parser';
 import { env } from './config/env.js';
 import authRoutes from './routes/auth.routes.js';
 import adminRoutes from './routes/admin.routes.js';
+import clientRoutes from './routes/client.routes.js';
+import campaignRoutes from './routes/campaign.routes.js';
+import adSetRoutes from './routes/adSet.routes.js';
+import creativeStrategyRoutes from './routes/creativeStrategy.routes.js';
+import notificationRoutes from './routes/notification.routes.js';
 import { errorHandler } from './middleware/error.middleware.js';
 import { ApiError } from './utils/ApiError.js';
 
@@ -33,6 +38,11 @@ app.use(cookieParser());
 // API Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/clients', clientRoutes);
+app.use('/api/campaigns', campaignRoutes);
+app.use('/api/ad-sets', adSetRoutes);
+app.use('/api/creative-strategy', creativeStrategyRoutes);
+app.use('/api/notifications', notificationRoutes);
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {

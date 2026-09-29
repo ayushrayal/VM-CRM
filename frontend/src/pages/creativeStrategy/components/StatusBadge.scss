@@ -1,0 +1,104 @@
+@use '../../../styles/variables' as *;
+
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 3px 8px;
+  border-radius: $radius-sm;
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  white-space: nowrap;
+  line-height: 1.2;
+
+  &.empty {
+    color: $color-text-muted;
+    font-weight: 400;
+  }
+
+  &.status-default {
+    background: #F4F4EE;
+    color: $color-text-secondary;
+    border: 1px solid $color-border;
+  }
+
+  &.status-primary {
+    background: #EFF6FF;
+    color: #1E40AF;
+    border: 1px solid #BFDBFE;
+  }
+
+  &.status-secondary {
+    background: #F1F5F9;
+    color: #475569;
+    border: 1px solid #E2E8F0;
+  }
+
+  &.status-success {
+    background: #ECFDF5;
+    color: #065F46;
+    border: 1px solid #A7F3D0;
+  }
+
+  &.status-warning {
+    background: $color-pending-bg;
+    color: $color-pending-text;
+    border: 1px solid $color-pending-border;
+  }
+
+  &.status-danger {
+    background: $color-danger-bg;
+    color: $color-danger-text;
+    border: 1px solid $color-danger-border;
+  }
+
+  &.status-info {
+    background: #F0F9FF;
+    color: #0369A1;
+    border: 1px solid #BAE6FD;
+  }
+
+  &.status-purple {
+    background: #FAF5FF;
+    color: #6B21A8;
+    border: 1px solid #E9D5FF;
+  }
+
+  &.status-teal {
+    background: #F0FDFA;
+    color: #0F766E;
+    border: 1px solid #99F6E4;
+  }
+
+  &.status-amber {
+    background: #FFFBEB;
+    color: #92400E;
+    border: 1px solid #FDE68A;
+  }
+
+  &.status-orange {
+    background: #FFF7ED;
+    color: #C2410C;
+    border: 1px solid #FED7AA;
+  }
+
+  &.status-indigo {
+    background: #EEF2FF;
+    color: #3730A3;
+    border: 1px solid #C7D2FE;
+  }
+
+  &.status-yellow {
+    background: #FEFCE8;
+    color: #854D0E;
+    border: 1px solid #FDE047;
+  }
+
+  &.status-muted {
+    background: #F3F4F6;
+    color: #6B7280;
+    border: 1px solid #E5E7EB;
+  }
+}

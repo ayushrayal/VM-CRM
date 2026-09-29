@@ -3,6 +3,7 @@ import { NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { Badge } from '../common/Badge';
 import { Button } from '../common/Button';
+import { NotificationBell } from '../common/NotificationBell';
 import { MobileNavDrawer } from './MobileNavDrawer';
 import './Navbar.scss';
 
@@ -48,6 +49,13 @@ export const Navbar = () => {
               Dashboard
             </NavLink>
 
+            <NavLink
+              to="/creative-strategy"
+              className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}
+            >
+              Creative Strategy
+            </NavLink>
+
             {isAdmin && (
               <NavLink
                 to="/user-management"
@@ -59,7 +67,9 @@ export const Navbar = () => {
           </nav>
 
           {/* User Profile Pill & Signout */}
-          <div className="navbar-user-actions">
+          <div className="navbar-user-actions" style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            {user && <NotificationBell />}
+
             {user && (
               <div className="user-profile-pill">
                 <div className="avatar-circle">{getInitials(user.name)}</div>

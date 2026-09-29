@@ -1,6 +1,7 @@
 import mongoose from 'mongoose';
 import { ROLES } from '../constants/roles.js';
 import { USER_STATUS } from '../constants/status.js';
+import { TEAM_ROLES } from '../constants/teamRoles.js';
 import { hashPassword, comparePassword } from '../utils/password.js';
 
 const userSchema = new mongoose.Schema(
@@ -29,6 +30,12 @@ const userSchema = new mongoose.Schema(
       type: String,
       enum: Object.values(ROLES),
       default: ROLES.TEAM,
+      index: true
+    },
+    teamRole: {
+      type: String,
+      enum: Object.values(TEAM_ROLES),
+      default: TEAM_ROLES.NONE,
       index: true
     },
     status: {

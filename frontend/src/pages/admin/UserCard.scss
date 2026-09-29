@@ -60,6 +60,35 @@
     }
   }
 
+  .card-team-role {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    padding: 0.65rem 0.85rem;
+    background-color: $color-bg;
+    border: 1px solid $color-border;
+    border-radius: $radius-sm;
+
+    .role-label {
+      font-size: 0.725rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: $color-text-muted;
+      font-weight: 700;
+    }
+
+    .role-value {
+      font-size: 0.875rem;
+      font-weight: 600;
+      color: $color-pure-black;
+
+      &.unassigned {
+        color: $color-text-secondary;
+        font-weight: 500;
+      }
+    }
+  }
+
   .card-actions {
     display: flex;
     align-items: center;

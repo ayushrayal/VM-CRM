@@ -5,6 +5,7 @@ import { TeamSignup } from '../pages/auth/TeamSignup';
 import { AdminSignup } from '../pages/auth/AdminSignup';
 import { Dashboard } from '../pages/dashboard/Dashboard';
 import { UserManagement } from '../pages/admin/UserManagement';
+import { CreativeStrategyPage } from '../pages/creativeStrategy/CreativeStrategyPage';
 import { AppLayout } from '../components/layout/AppLayout';
 import { ProtectedRoute } from './ProtectedRoute';
 import { RoleRoute } from './RoleRoute';
@@ -21,6 +22,7 @@ export const AppRoutes = () => {
       <Route element={<ProtectedRoute />}>
         <Route element={<AppLayout />}>
           <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/creative-strategy" element={<CreativeStrategyPage />} />
 
           {/* Role Protected Routes (Admin Only) */}
           <Route element={<RoleRoute allowedRoles={['admin']} />}>

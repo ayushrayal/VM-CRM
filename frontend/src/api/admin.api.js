@@ -19,3 +19,8 @@ export const approveTeamRequestApi = async (id) => {
 export const rejectTeamRequestApi = async (id) => {
   return await api.patch(`/admin/team-requests/${id}/reject`);
 };
+
+export const updateUserTeamRoleApi = async (id, teamRole) => {
+  return await api.patch(`/admin/users/${id}/team-role`, { teamRole });
+};
+

@@ -1,9 +1,10 @@
 import React from 'react';
 import { Badge } from '../../components/common/Badge';
 import { Button } from '../../components/common/Button';
+import { getTeamRoleLabel } from './AssignRoleModal';
 import './UserCard.scss';
 
-export const UserCard = ({ user, onDeleteClick, isCurrentAdmin }) => {
+export const UserCard = ({ user, onDeleteClick, onRoleClick, isCurrentAdmin }) => {
   const formatDate = (dateString) => {
     if (!dateString) return '';
     const date = new Date(dateString);
@@ -35,7 +36,23 @@ export const UserCard = ({ user, onDeleteClick, isCurrentAdmin }) => {
       </div>
 
       {isTeam && (
+        <div className="card-team-role">
+          <span className="role-label">Team Role</span>
+          <span className={`role-value ${user.teamRole && user.teamRole !== 'none' ? 'assigned' : 'unassigned'}`}>
+            {getTeamRoleLabel(user.teamRole)}
+          </span>
+        </div>
+      )}
+
+      {isTeam && (
         <div className="card-actions">
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => onRoleClick && onRoleClick(user)}
+          >
+            Change Role
+          </Button>
           <Button
             variant="danger"
             size="sm"
