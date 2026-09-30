@@ -75,9 +75,9 @@ On the Render Dashboard, click **New +** → **Web Service**:
 | **Name** | `vytalis-media-crm` (or your preferred name) |
 | **Region** | Nearest to your MongoDB Atlas cluster (e.g. Singapore, Frankfurt, Oregon) |
 | **Branch** | `main` |
-| **Root Directory** | `backend` |
+| **Root Directory** | `.` *(leave blank or enter `.`, repo root)* |
 | **Runtime** | `Node` |
-| **Build Command** | `npm install && npm run build` |
+| **Build Command** | `npm run build` |
 | **Start Command** | `npm start` |
 | **Health Check Path** | `/health` |
 | **Auto-Deploy** | `Yes` |

@@ -16,7 +16,6 @@ dist/
 dist-ssr/
 build/
 */build/
-backend/public/
 
 # Logs
 *.log
@@ -39,3 +38,4 @@ Thumbs.db
 
 # Internal documentation
 Docs/
+
