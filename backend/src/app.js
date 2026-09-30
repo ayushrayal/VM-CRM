@@ -54,23 +54,39 @@ const getAllowedOrigins = () => {
 
 const allowedOrigins = getAllowedOrigins();
 
-// Enable CORS with credentials support
-app.use(
-  cors({
-    origin: (origin, callback) => {
-      // Same-origin requests (e.g. from the served frontend), curl, mobile apps, health checks
-      if (!origin) return callback(null, true);
-      const normalized = origin.replace(/\/$/, '');
-      if (allowedOrigins.length === 0 || allowedOrigins.includes(normalized)) {
-        return callback(null, true);
+// Enable CORS on API routes with credentials support
+const corsMiddleware = cors((req, callback) => {
+  const origin = req.headers.origin;
+  let isAllowed = false;
+
+  if (!origin) {
+    // Same-origin requests, curl, mobile apps, server-to-server
+    isAllowed = true;
+  } else {
+    const normalized = origin.replace(/\/$/, '');
+    const reqHost = req.headers['x-forwarded-host'] || req.headers.host;
+    let isSameHost = false;
+    if (reqHost) {
+      try {
+        const originHost = new URL(origin).host;
+        isSameHost = originHost.toLowerCase() === reqHost.toLowerCase();
+      } catch {
+        // Ignore URL parse error
       }
-      return callback(new ApiError(403, `CORS origin '${origin}' is not permitted.`));
-    },
+    }
+
+    if (isSameHost || allowedOrigins.length === 0 || allowedOrigins.includes(normalized)) {
+      isAllowed = true;
+    }
+  }
+
+  callback(null, {
+    origin: isAllowed,
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization']
-  })
-);
+  });
+});
 
 // Body parsers
 app.use(express.json({ limit: '16kb' }));
@@ -100,6 +116,7 @@ app.get('/api/health', (req, res) => {
 // ==========================================
 // BACKEND API ROUTES
 // ==========================================
+app.use('/api', corsMiddleware);
 app.use('/api/auth', authRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/clients', clientRoutes);
@@ -118,6 +135,14 @@ app.use('/api', (req, res, next) => {
 // ==========================================
 // Serve production static assets from backend/public/
 app.use(express.static(publicPath));
+
+// Explicit 404 for missing static assets so they NEVER hit the React SPA fallback
+app.use((req, res, next) => {
+  if (req.path.startsWith('/assets/') || path.extname(req.path)) {
+    return res.status(404).type('text/plain').send(`Static asset '${req.originalUrl}' not found.`);
+  }
+  next();
+});
 
 // React SPA fallback: Serve index.html for all non-API GET routes (e.g. /, /login, /dashboard, etc.)
 app.use((req, res, next) => {
