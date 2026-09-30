@@ -7,6 +7,7 @@ import {
   markAsRead,
   markAllAsRead
 } from '../../api/notification.api';
+import { getStreamUrl } from '../../api/axios';
 
 export const NotificationBell = () => {
   const { user } = useAuth();
@@ -32,7 +33,7 @@ export const NotificationBell = () => {
 
     let sse;
     try {
-      sse = new EventSource('http://localhost:5000/api/creative-strategy/stream');
+      sse = new EventSource(getStreamUrl('/creative-strategy/stream'), { withCredentials: true });
       sse.addEventListener('NOTIFICATION_CREATED', (e) => {
         try {
           const newNotif = JSON.parse(e.data);

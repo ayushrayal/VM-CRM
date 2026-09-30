@@ -5,7 +5,8 @@ export const getCookieOptions = () => {
   return {
     httpOnly: true,
     secure: isProduction,
-    sameSite: isProduction ? 'strict' : 'lax',
+    // Same-origin unified deployment allows sameSite: 'lax' for clean, secure cookie handling
+    sameSite: 'lax',
     maxAge: 24 * 60 * 60 * 1000, // 1 Day matching JWT default
     path: '/'
   };

@@ -22,9 +22,10 @@ const startServer = async () => {
     await connectDB();
     await connectRedis();
 
-    // Start HTTP Server
-    app.listen(env.PORT, () => {
-      console.log(`🌐 Server running in [${env.NODE_ENV}] mode on port ${env.PORT}`);
+    // Start HTTP Server on 0.0.0.0 and process.env.PORT for Render
+    const port = process.env.PORT || env.PORT || 5000;
+    app.listen(port, '0.0.0.0', () => {
+      console.log(`🌐 Server running in [${env.NODE_ENV}] mode on http://0.0.0.0:${port}`);
     });
   } catch (error) {
     console.error(`❌ Server startup failed: ${error.message}`);

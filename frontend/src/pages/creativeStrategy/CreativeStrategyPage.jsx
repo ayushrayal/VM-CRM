@@ -23,6 +23,7 @@ import {
   deleteCreativeStrategy
 } from '../../api/creativeStrategy.api';
 import { getTeamMembers } from '../../api/user.api';
+import { getStreamUrl } from '../../api/axios';
 
 import { StatusBadge } from './components/StatusBadge';
 import { RecordDrawer } from './components/RecordDrawer';
@@ -130,7 +131,7 @@ export const CreativeStrategyPage = () => {
   useEffect(() => {
     let sse;
     try {
-      sse = new EventSource('http://localhost:5000/api/creative-strategy/stream');
+      sse = new EventSource(getStreamUrl('/creative-strategy/stream'), { withCredentials: true });
 
       sse.addEventListener('CLIENT_CREATED', () => loadClients());
       sse.addEventListener('CLIENT_UPDATED', () => loadClients());

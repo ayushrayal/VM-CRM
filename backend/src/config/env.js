@@ -5,20 +5,45 @@ dotenv.config();
 
 const envSchema = z.object({
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
-  PORT: z.string().default('5000').transform((val) => parseInt(val, 10)),
-  MONGO_URI: z.string({ required_error: 'MONGO_URI is required' }),
-  CLIENT_URL: z.string().url('CLIENT_URL must be a valid URL'),
-  JWT_SECRET: z.string().min(16, 'JWT_SECRET must be at least 16 characters'),
+  PORT: z
+    .string()
+    .or(z.number())
+    .default('5000')
+    .transform((val) => (typeof val === 'number' ? val : parseInt(val, 10))),
+  MONGO_URI: z
+    .string()
+    .or(z.undefined())
+    .transform(() => process.env.MONGO_URI || process.env.MONGODB_URI || '')
+    .pipe(z.string().min(1, 'MONGO_URI or MONGODB_URI is required and cannot be empty')),
+  CLIENT_URL: z
+    .string()
+    .optional()
+    .default(''),
+  JWT_SECRET: z
+    .string({ required_error: 'JWT_SECRET is required' })
+    .min(16, 'JWT_SECRET must be at least 16 characters'),
   JWT_EXPIRES_IN: z.string().default('1d'),
-  ADMIN_ACCESS_KEY: z.string().min(8, 'ADMIN_ACCESS_KEY must be at least 8 characters'),
-  REDIS_URL: z.string().default('redis://127.0.0.1:6379')
+  ADMIN_ACCESS_KEY: z
+    .string()
+    .or(z.undefined())
+    .transform(() => process.env.ADMIN_ACCESS_KEY || process.env.ACCESS_KEY || '')
+    .pipe(z.string().min(8, 'ADMIN_ACCESS_KEY or ACCESS_KEY must be at least 8 characters')),
+  REDIS_URL: z.string().optional().default('redis://127.0.0.1:6379'),
+  USE_CUSTOM_DNS: z.string().optional()
 });
 
 const _env = envSchema.safeParse(process.env);
 
 if (!_env.success) {
-  console.error('❌ Invalid environment variables:', _env.error.format());
-  throw new Error('Invalid environment variables configuration.');
+  console.error('\n❌ CRITICAL: Missing or invalid required environment variables:');
+  const formattedErrors = _env.error.format();
+  for (const [key, value] of Object.entries(formattedErrors)) {
+    if (key !== '_errors' && value?._errors?.length) {
+      console.error(`   • ${key}: ${value._errors.join(', ')}`);
+    }
+  }
+  console.error('Please configure these variables in your .env or Render Dashboard.\n');
+  throw new Error('Server halted due to invalid or missing required environment variables.');
 }
 
 export const env = _env.data;
