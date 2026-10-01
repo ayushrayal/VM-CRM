@@ -4,6 +4,11 @@ import { User } from '../models/User.js';
 import { USER_STATUS } from '../constants/status.js';
 
 export const authGuard = async (req, res, next) => {
+  // Always permit unauthenticated OPTIONS preflight requests to succeed
+  if (req.method === 'OPTIONS') {
+    return next();
+  }
+
   try {
     let token = req.cookies?.token;
 

@@ -7,7 +7,7 @@ export const errorHandler = (err, req, res, next) => {
   if (!(error instanceof ApiError)) {
     const statusCode = error.statusCode || error.status || 500;
     const message = error.message || 'Internal Server Error';
-    error = new ApiError(statusCode, message, [], err.stack);
+    error = new ApiError(statusCode, message, [], err.stack, error.errorCode || error.code || null);
   }
 
   // Handle Mongoose duplicate key errors
@@ -21,6 +21,7 @@ export const errorHandler = (err, req, res, next) => {
   const response = {
     success: false,
     message: error.message,
+    ...(error.errorCode ? { errorCode: error.errorCode } : {}),
     errors: error.errors || []
   };
 

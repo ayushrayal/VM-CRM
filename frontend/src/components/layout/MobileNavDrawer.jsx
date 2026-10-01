@@ -44,6 +44,14 @@ export const MobileNavDrawer = ({ isOpen, onClose, user, isAdmin, onSignout }) =
             Creative Strategy
           </NavLink>
 
+          <NavLink
+            to="/gamiply/cro"
+            className={({ isActive }) => `drawer-link ${isActive ? 'active' : ''}`}
+            onClick={onClose}
+          >
+            🧪 CRO Gamiply
+          </NavLink>
+
           {isAdmin && (
             <NavLink
               to="/user-management"

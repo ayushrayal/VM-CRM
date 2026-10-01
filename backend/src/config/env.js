@@ -29,7 +29,10 @@ const envSchema = z.object({
     .transform(() => process.env.ADMIN_ACCESS_KEY || process.env.ACCESS_KEY || '')
     .pipe(z.string().min(8, 'ADMIN_ACCESS_KEY or ACCESS_KEY must be at least 8 characters')),
   REDIS_URL: z.string().optional().default('redis://127.0.0.1:6379'),
-  USE_CUSTOM_DNS: z.string().optional()
+  USE_CUSTOM_DNS: z.string().optional(),
+  IMAGEKIT_PUBLIC_KEY: z.string().optional().default(''),
+  IMAGEKIT_PRIVATE_KEY: z.string().optional().default(''),
+  IMAGEKIT_URL_ENDPOINT: z.string().optional().default('')
 });
 
 const _env = envSchema.safeParse(process.env);

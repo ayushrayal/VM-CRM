@@ -16,6 +16,7 @@ dist/
 dist-ssr/
 build/
 */build/
+backend/public/uploads/
 
 # Logs
 *.log

@@ -56,6 +56,23 @@ export const Navbar = () => {
               Creative Strategy
             </NavLink>
 
+            <div className="nav-gamiply-dropdown">
+              <NavLink
+                to="/gamiply/cro"
+                className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}
+              >
+                Gamiply ▾
+              </NavLink>
+              <div className="gamiply-menu">
+                <NavLink to="/gamiply/cro" className="gamiply-item">
+                  🧪 CRO Gamiply
+                </NavLink>
+                <div className="gamiply-item disabled">
+                  🎨 Creative Strategist <span className="soon-badge">Soon</span>
+                </div>
+              </div>
+            </div>
+
             {isAdmin && (
               <NavLink
                 to="/user-management"

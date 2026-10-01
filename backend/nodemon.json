@@ -1,0 +1,11 @@
+{
+  "watch": ["src"],
+  "ext": "js,json",
+  "ignore": [
+    "public/**",
+    "uploads/**",
+    "node_modules/**",
+    "../frontend/dist/**",
+    "test-*.js"
+  ]
+}

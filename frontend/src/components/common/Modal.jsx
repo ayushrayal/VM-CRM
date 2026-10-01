@@ -1,7 +1,7 @@
 import React, { useEffect } from 'react';
 import './Modal.scss';
 
-export const Modal = ({ isOpen, onClose, title, children }) => {
+export const Modal = ({ isOpen, onClose, title, size = 'md', className = '', children }) => {
   useEffect(() => {
     const handleKeyDown = (e) => {
       if (e.key === 'Escape') onClose();
@@ -20,7 +20,7 @@ export const Modal = ({ isOpen, onClose, title, children }) => {
 
   return (
     <div className="modal-overlay" onClick={onClose}>
-      <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+      <div className={`modal-content modal-${size} ${className}`} onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
           <h3 className="modal-title">{title}</h3>
           <button className="modal-close" onClick={onClose} aria-label="Close modal">

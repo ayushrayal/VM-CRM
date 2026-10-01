@@ -9,8 +9,22 @@ export const validate = (schema) => async (req, res, next) => {
     });
 
     if (parsed.body) req.body = parsed.body;
-    if (parsed.query) req.query = parsed.query;
-    if (parsed.params) req.params = parsed.params;
+    if (parsed.query && req.query) {
+      try {
+        req.query = parsed.query;
+      } catch {
+        // Express 5 query getter fallback
+        Object.keys(req.query).forEach((key) => delete req.query[key]);
+        Object.assign(req.query, parsed.query);
+      }
+    }
+    if (parsed.params && req.params) {
+      try {
+        req.params = parsed.params;
+      } catch {
+        Object.assign(req.params, parsed.params);
+      }
+    }
 
     next();
   } catch (error) {

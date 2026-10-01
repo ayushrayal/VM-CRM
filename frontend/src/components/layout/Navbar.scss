@@ -75,6 +75,63 @@
         border-bottom: 2px solid $color-lemon-yellow;
       }
     }
+
+    .nav-gamiply-dropdown {
+      position: relative;
+
+      &:hover .gamiply-menu {
+        display: flex;
+      }
+
+      .gamiply-menu {
+        display: none;
+        position: absolute;
+        top: 100%;
+        left: 0;
+        min-width: 200px;
+        background: #FFFFFF;
+        border: 1px solid $color-border;
+        border-radius: $radius-md;
+        box-shadow: 0 8px 20px rgba(0, 0, 0, 0.08);
+        padding: 6px;
+        flex-direction: column;
+        gap: 2px;
+        z-index: 100;
+
+        .gamiply-item {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          padding: 8px 12px;
+          border-radius: $radius-sm;
+          font-size: 0.875rem;
+          font-weight: 500;
+          color: $color-text-primary;
+          text-decoration: none;
+          transition: background $transition-fast;
+
+          &:hover:not(.disabled) {
+            background: $color-bg;
+          }
+
+          &.disabled {
+            opacity: 0.55;
+            cursor: not-allowed;
+            color: $color-text-muted;
+          }
+
+          .soon-badge {
+            font-size: 0.65rem;
+            font-weight: 700;
+            background: #F3F4F6;
+            color: #6B7280;
+            padding: 1px 6px;
+            border-radius: $radius-full;
+            text-transform: uppercase;
+          }
+        }
+      }
+    }
   }
 
   .navbar-user-actions {

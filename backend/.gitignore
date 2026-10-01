@@ -5,3 +5,5 @@ node_modules/
 *.log
 logs/
 .DS_Store
+test-creative-strategy.js
+test-cro.js

@@ -14,6 +14,7 @@ import campaignRoutes from './routes/campaign.routes.js';
 import adSetRoutes from './routes/adSet.routes.js';
 import creativeStrategyRoutes from './routes/creativeStrategy.routes.js';
 import notificationRoutes from './routes/notification.routes.js';
+import croRoutes from './routes/cro.routes.js';
 import { errorHandler } from './middleware/error.middleware.js';
 import { ApiError } from './utils/ApiError.js';
 
@@ -33,7 +34,9 @@ app.use(
   })
 );
 
-// Parse allowed client origins from CLIENT_URL (supports optional custom domain or dev origins)
+// ==========================================
+// 1. CORS CONFIGURATION (MUST BE TOP-LEVEL)
+// ==========================================
 const getAllowedOrigins = () => {
   const configured = env.CLIENT_URL || '';
   const origins = configured
@@ -41,12 +44,20 @@ const getAllowedOrigins = () => {
     .map((origin) => origin.trim().replace(/\/$/, ''))
     .filter(Boolean);
 
-  // In non-production, include common local Vite dev origins
-  if (env.NODE_ENV !== 'production') {
-    if (!origins.includes('http://localhost:5173')) origins.push('http://localhost:5173');
-    if (!origins.includes('http://localhost:3000')) origins.push('http://localhost:3000');
-    if (!origins.includes('http://127.0.0.1:5173')) origins.push('http://127.0.0.1:5173');
-    if (!origins.includes('http://localhost:5000')) origins.push('http://localhost:5000');
+  // Explicitly allow local development origins and ports
+  const localOrigins = [
+    'http://localhost:5173',
+    'http://127.0.0.1:5173',
+    'http://localhost:3000',
+    'http://127.0.0.1:3000',
+    'http://localhost:5000',
+    'http://127.0.0.1:5000'
+  ];
+
+  for (const o of localOrigins) {
+    if (!origins.includes(o)) {
+      origins.push(o);
+    }
   }
 
   return origins;
@@ -54,48 +65,75 @@ const getAllowedOrigins = () => {
 
 const allowedOrigins = getAllowedOrigins();
 
-// Enable CORS on API routes with credentials support
-const corsMiddleware = cors((req, callback) => {
-  const origin = req.headers.origin;
-  let isAllowed = false;
+const corsOptions = {
+  origin(origin, callback) {
+    // Allow requests without Origin header (curl, mobile apps, same-origin server-to-server)
+    if (!origin) {
+      return callback(null, true);
+    }
 
-  if (!origin) {
-    // Same-origin requests, curl, mobile apps, server-to-server
-    isAllowed = true;
-  } else {
     const normalized = origin.replace(/\/$/, '');
-    const reqHost = req.headers['x-forwarded-host'] || req.headers.host;
-    let isSameHost = false;
-    if (reqHost) {
-      try {
-        const originHost = new URL(origin).host;
-        isSameHost = originHost.toLowerCase() === reqHost.toLowerCase();
-      } catch {
-        // Ignore URL parse error
+
+    if (allowedOrigins.includes(normalized)) {
+      return callback(null, true);
+    }
+
+    // Dynamic hostname match for same host or production domains
+    try {
+      const originHost = new URL(origin).host.toLowerCase();
+      for (const allowed of allowedOrigins) {
+        if (allowed.startsWith('http')) {
+          if (new URL(allowed).host.toLowerCase() === originHost) {
+            return callback(null, true);
+          }
+        }
       }
+    } catch {
+      // Ignore parse failure
     }
 
-    if (isSameHost || allowedOrigins.length === 0 || allowedOrigins.includes(normalized)) {
-      isAllowed = true;
-    }
-  }
+    console.warn(`[CORS] Blocked request from origin: ${origin}`);
+    return callback(new Error(`CORS blocked origin: ${origin}`));
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PATCH', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: [
+    'Content-Type',
+    'Authorization',
+    'X-Requested-With',
+    'Accept',
+    'Origin'
+  ]
+};
 
-  callback(null, {
-    origin: isAllowed,
-    credentials: true,
-    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization']
+// Apply CORS globally before body parsers and before all routes
+app.use(cors(corsOptions));
+app.options(/.*/, cors(corsOptions));
+
+// ==========================================
+// 2. SAFE DIAGNOSTIC LOGGING (NON-SENSITIVE)
+// ==========================================
+app.use((req, res, next) => {
+  const origin = req.headers.origin || 'no-origin';
+  res.on('finish', () => {
+    if (req.originalUrl?.startsWith('/api')) {
+      console.log(`[HTTP Diagnostic] ${req.method} ${req.originalUrl} | Origin: ${origin} | Status: ${res.statusCode}`);
+    }
   });
+  next();
 });
 
-// Body parsers
-app.use(express.json({ limit: '16kb' }));
-app.use(express.urlencoded({ extended: true, limit: '16kb' }));
-
-// Cookie parser
+// ==========================================
+// 3. BODY & COOKIE PARSERS
+// ==========================================
+// 10mb limit to support high-res base64 CRO screenshot uploads
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use(cookieParser());
 
-// Primary Health check endpoints for Render and uptime monitoring
+// ==========================================
+// 4. HEALTH CHECK ENDPOINTS
+// ==========================================
 app.get('/health', (req, res) => {
   const isDbConnected = mongoose.connection.readyState === 1;
   res.status(isDbConnected ? 200 : 503).json({
@@ -114,9 +152,8 @@ app.get('/api/health', (req, res) => {
 });
 
 // ==========================================
-// BACKEND API ROUTES
+// 5. BACKEND API ROUTES
 // ==========================================
-app.use('/api', corsMiddleware);
 app.use('/api/auth', authRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/clients', clientRoutes);
@@ -124,6 +161,7 @@ app.use('/api/campaigns', campaignRoutes);
 app.use('/api/ad-sets', adSetRoutes);
 app.use('/api/creative-strategy', creativeStrategyRoutes);
 app.use('/api/notifications', notificationRoutes);
+app.use('/api/cro', croRoutes);
 
 // Explicit 404 for unhandled API routes so they are NEVER intercepted by React SPA fallback
 app.use('/api', (req, res, next) => {
@@ -131,7 +169,7 @@ app.use('/api', (req, res, next) => {
 });
 
 // ==========================================
-// FRONTEND STATIC SERVING & SPA FALLBACK
+// 6. FRONTEND STATIC SERVING & SPA FALLBACK
 // ==========================================
 // Serve production static assets from backend/public/
 app.use(express.static(publicPath));
