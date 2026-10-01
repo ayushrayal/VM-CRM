@@ -65,50 +65,94 @@ const getAllowedOrigins = () => {
 
 const allowedOrigins = getAllowedOrigins();
 
-const corsOptions = {
-  origin(origin, callback) {
-    // Allow requests without Origin header (curl, mobile apps, same-origin server-to-server)
-    if (!origin) {
-      return callback(null, true);
+const corsOptionsDelegate = (req, callback) => {
+  const origin = req.headers.origin;
+
+  // Requests without Origin header (curl, mobile apps, same-origin navigation)
+  if (!origin) {
+    return callback(null, {
+      origin: true,
+      credentials: true,
+      methods: ['GET', 'POST', 'PATCH', 'PUT', 'DELETE', 'OPTIONS'],
+      allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin']
+    });
+  }
+
+  const normalized = origin.replace(/\/$/, '');
+
+  // 1. Explicitly configured origins from env or local development
+  if (allowedOrigins.includes(normalized)) {
+    return callback(null, {
+      origin: true,
+      credentials: true,
+      methods: ['GET', 'POST', 'PATCH', 'PUT', 'DELETE', 'OPTIONS'],
+      allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin']
+    });
+  }
+
+  try {
+    const originUrl = new URL(origin);
+    const originHost = originUrl.host.toLowerCase();
+    const serverHost = (req.headers['x-forwarded-host'] || req.headers.host || '').toLowerCase();
+
+    // 2. Same-origin match: Origin host matches server's Host / X-Forwarded-Host header
+    if (serverHost && originHost === serverHost) {
+      return callback(null, {
+        origin: true,
+        credentials: true,
+        methods: ['GET', 'POST', 'PATCH', 'PUT', 'DELETE', 'OPTIONS'],
+        allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin']
+      });
     }
 
-    const normalized = origin.replace(/\/$/, '');
-
-    if (allowedOrigins.includes(normalized)) {
-      return callback(null, true);
+    // 3. Render deployment domains (*.onrender.com)
+    if (originHost.endsWith('.onrender.com')) {
+      return callback(null, {
+        origin: true,
+        credentials: true,
+        methods: ['GET', 'POST', 'PATCH', 'PUT', 'DELETE', 'OPTIONS'],
+        allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin']
+      });
     }
 
-    // Dynamic hostname match for same host or production domains
-    try {
-      const originHost = new URL(origin).host.toLowerCase();
-      for (const allowed of allowedOrigins) {
-        if (allowed.startsWith('http')) {
-          if (new URL(allowed).host.toLowerCase() === originHost) {
-            return callback(null, true);
-          }
+    // 4. Localhost / local IP match
+    if (
+      originUrl.hostname === 'localhost' ||
+      originUrl.hostname === '127.0.0.1' ||
+      originUrl.hostname === '0.0.0.0'
+    ) {
+      return callback(null, {
+        origin: true,
+        credentials: true,
+        methods: ['GET', 'POST', 'PATCH', 'PUT', 'DELETE', 'OPTIONS'],
+        allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin']
+      });
+    }
+
+    // 5. Dynamic match against allowedOrigins hostnames
+    for (const allowed of allowedOrigins) {
+      if (allowed.startsWith('http')) {
+        if (new URL(allowed).host.toLowerCase() === originHost) {
+          return callback(null, {
+            origin: true,
+            credentials: true,
+            methods: ['GET', 'POST', 'PATCH', 'PUT', 'DELETE', 'OPTIONS'],
+            allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin']
+          });
         }
       }
-    } catch {
-      // Ignore parse failure
     }
+  } catch {
+    // Ignore parse failure
+  }
 
-    console.warn(`[CORS] Blocked request from origin: ${origin}`);
-    return callback(new Error(`CORS blocked origin: ${origin}`));
-  },
-  credentials: true,
-  methods: ['GET', 'POST', 'PATCH', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: [
-    'Content-Type',
-    'Authorization',
-    'X-Requested-With',
-    'Accept',
-    'Origin'
-  ]
+  // Gracefully disallow third-party origin without throwing a 500 JSON error
+  return callback(null, { origin: false });
 };
 
 // Apply CORS globally before body parsers and before all routes
-app.use(cors(corsOptions));
-app.options(/.*/, cors(corsOptions));
+app.use(cors(corsOptionsDelegate));
+app.options(/.*/, cors(corsOptionsDelegate));
 
 // ==========================================
 // 2. SAFE DIAGNOSTIC LOGGING (NON-SENSITIVE)

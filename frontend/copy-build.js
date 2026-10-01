@@ -14,15 +14,28 @@ if (!fs.existsSync(sourceDir)) {
 }
 
 try {
-  // Ensure target directory exists and is clean
-  if (fs.existsSync(targetDir)) {
-    fs.rmSync(targetDir, { recursive: true, force: true });
+  // Ensure target directory exists
+  if (!fs.existsSync(targetDir)) {
+    fs.mkdirSync(targetDir, { recursive: true });
   }
-  fs.mkdirSync(targetDir, { recursive: true });
+
+  // Safely clean only stale assets directory to prevent leftover hashed files
+  const targetAssetsDir = path.join(targetDir, 'assets');
+  if (fs.existsSync(targetAssetsDir)) {
+    fs.rmSync(targetAssetsDir, { recursive: true, force: true });
+  }
 
   // Copy all dist files into backend/public
   fs.cpSync(sourceDir, targetDir, { recursive: true });
-  console.log(`✓ Successfully synced React production build to backend/public`);
+
+  // Verify critical production files exist
+  const targetIndex = path.join(targetDir, 'index.html');
+  if (!fs.existsSync(targetIndex)) {
+    throw new Error('index.html missing after copying build artifacts');
+  }
+
+  const copiedAssets = fs.existsSync(targetAssetsDir) ? fs.readdirSync(targetAssetsDir) : [];
+  console.log(`✓ Successfully synced React production build to backend/public (${copiedAssets.length} assets synced)`);
 } catch (err) {
   console.error(`❌ Failed to sync build files to backend/public: ${err.message}`);
   process.exit(1);
