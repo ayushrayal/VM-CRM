@@ -15,6 +15,7 @@ import adSetRoutes from './routes/adSet.routes.js';
 import creativeStrategyRoutes from './routes/creativeStrategy.routes.js';
 import notificationRoutes from './routes/notification.routes.js';
 import croRoutes from './routes/cro.routes.js';
+import creativeRoutes from './routes/creative.routes.js';
 import { errorHandler } from './middleware/error.middleware.js';
 import { ApiError } from './utils/ApiError.js';
 
@@ -206,6 +207,7 @@ app.use('/api/ad-sets', adSetRoutes);
 app.use('/api/creative-strategy', creativeStrategyRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/cro', croRoutes);
+app.use('/api/creative', creativeRoutes);
 
 // Explicit 404 for unhandled API routes so they are NEVER intercepted by React SPA fallback
 app.use('/api', (req, res, next) => {

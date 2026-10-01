@@ -1,0 +1,189 @@
+@use '../../styles/variables' as *;
+
+.creative-card {
+  background: #FFFFFF;
+  border: 1px solid $color-border;
+  border-radius: $radius-md;
+  padding: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.875rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  transition: transform $transition-fast, box-shadow $transition-fast, border-color $transition-fast;
+
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px -2px rgba(0, 0, 0, 0.08);
+    border-color: #CBD5E1;
+  }
+
+  .card-top-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 8px;
+
+    .client-pill {
+      font-size: 0.75rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      background: #F3F4F6;
+      color: $color-text-primary;
+      padding: 2px 8px;
+      border-radius: $radius-sm;
+      border: 1px solid $color-border;
+    }
+
+    .status-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      padding: 2px 10px;
+      border-radius: $radius-full;
+      border: 1px solid transparent;
+
+      .status-dot {
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+      }
+    }
+  }
+
+  .ad-name-title {
+    font-family: $font-heading;
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: $color-text-primary;
+    line-height: 1.4;
+    margin: 0;
+    cursor: pointer;
+    transition: color $transition-fast;
+    word-break: break-word;
+
+    &:hover {
+      color: $color-warm-orange;
+    }
+  }
+
+  /* Performance Metrics Grid */
+  .card-metrics-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1.2fr;
+    gap: 8px;
+    align-items: center;
+    background: #F8FAFC;
+    padding: 0.75rem;
+    border-radius: $radius-sm;
+    border: 1px solid #F1F5F9;
+
+    .metric-box {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+
+      .metric-label {
+        font-size: 0.6875rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        color: $color-text-muted;
+        letter-spacing: 0.03em;
+      }
+
+      .metric-value {
+        font-family: $font-heading;
+        font-size: 0.9375rem;
+        font-weight: 700;
+        color: $color-text-primary;
+      }
+    }
+
+    .points-pill {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      padding: 4px 8px;
+      border-radius: $radius-sm;
+
+      .points-label {
+        font-size: 0.625rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.03em;
+        opacity: 0.8;
+      }
+
+      .points-text {
+        font-family: $font-heading;
+        font-size: 0.9375rem;
+        font-weight: 800;
+      }
+
+      &.positive {
+        background: #DCFCE7;
+        color: #15803D;
+        border: 1px solid #BBF7D0;
+      }
+
+      &.zero {
+        background: #F3F4F6;
+        color: $color-text-muted;
+        border: 1px solid #E5E7EB;
+      }
+    }
+  }
+
+  /* Footer */
+  .card-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-top: 1px solid #F3F4F6;
+    padding-top: 0.75rem;
+    gap: 8px;
+
+    .creator-info {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+
+      .creator-avatar {
+        width: 28px;
+        height: 28px;
+        border-radius: 50%;
+        background: $color-lemon-yellow;
+        color: $color-pure-black;
+        font-weight: 800;
+        font-size: 0.75rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border: 1px solid rgba(0, 0, 0, 0.1);
+      }
+
+      .creator-details {
+        display: flex;
+        flex-direction: column;
+
+        .creator-name {
+          font-size: 0.75rem;
+          font-weight: 600;
+          color: $color-text-primary;
+        }
+
+        .creator-role {
+          font-size: 0.7rem;
+          color: $color-text-muted;
+        }
+      }
+    }
+
+    .card-actions {
+      display: flex;
+      gap: 4px;
+    }
+  }
+}

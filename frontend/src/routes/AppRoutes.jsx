@@ -7,6 +7,7 @@ import { Dashboard } from '../pages/dashboard/Dashboard';
 import { UserManagement } from '../pages/admin/UserManagement';
 import { CreativeStrategyPage } from '../pages/creativeStrategy/CreativeStrategyPage';
 import { CROGamiplyPage } from '../pages/croGamiply/CROGamiplyPage';
+import { CreativeGamiplyPage } from '../pages/creativeGamiply/CreativeGamiplyPage';
 import { AppLayout } from '../components/layout/AppLayout';
 import { ProtectedRoute } from './ProtectedRoute';
 import { RoleRoute } from './RoleRoute';
@@ -26,6 +27,8 @@ export const AppRoutes = () => {
           <Route path="/creative-strategy" element={<CreativeStrategyPage />} />
           <Route path="/gamiply/cro" element={<CROGamiplyPage />} />
           <Route path="/cro-gamiply" element={<Navigate to="/gamiply/cro" replace />} />
+          <Route path="/gamiply/creative" element={<CreativeGamiplyPage />} />
+          <Route path="/creative-gamiply" element={<Navigate to="/gamiply/creative" replace />} />
 
           {/* Role Protected Routes (Admin Only) */}
           <Route element={<RoleRoute allowedRoles={['admin']} />}>

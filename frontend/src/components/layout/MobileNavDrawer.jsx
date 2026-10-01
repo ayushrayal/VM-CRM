@@ -49,7 +49,15 @@ export const MobileNavDrawer = ({ isOpen, onClose, user, isAdmin, onSignout }) =
             className={({ isActive }) => `drawer-link ${isActive ? 'active' : ''}`}
             onClick={onClose}
           >
-            🧪 CRO Gamiply
+            🧪 CRO Performance
+          </NavLink>
+
+          <NavLink
+            to="/gamiply/creative"
+            className={({ isActive }) => `drawer-link ${isActive ? 'active' : ''}`}
+            onClick={onClose}
+          >
+            🎨 Creative Performance
           </NavLink>
 
           {isAdmin && (

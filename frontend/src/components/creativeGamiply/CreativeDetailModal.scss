@@ -1,0 +1,236 @@
+@use '../../styles/variables' as *;
+
+.creative-detail-modal {
+  .creative-detail-content {
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+
+    .detail-top-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+
+      .client-badge {
+        font-family: $font-heading;
+        font-size: 0.8125rem;
+        font-weight: 800;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        background: #F1F5F9;
+        color: $color-text-primary;
+        padding: 4px 10px;
+        border-radius: $radius-sm;
+        border: 1px solid #CBD5E1;
+      }
+
+      .status-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 0.8125rem;
+        font-weight: 600;
+        padding: 4px 12px;
+        border-radius: $radius-full;
+        border: 1px solid transparent;
+
+        .status-dot {
+          width: 7px;
+          height: 7px;
+          border-radius: 50%;
+        }
+      }
+    }
+
+    .detail-ad-box {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+
+      .section-label {
+        font-size: 0.6875rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        color: $color-text-muted;
+      }
+
+      .ad-name-heading {
+        font-family: $font-heading;
+        font-size: 1.25rem;
+        font-weight: 800;
+        color: $color-text-primary;
+        line-height: 1.4;
+        margin: 0;
+        word-break: break-word;
+      }
+    }
+
+    .detail-creator-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 0.75rem 1rem;
+      background: #F8FAFC;
+      border-radius: $radius-sm;
+      border: 1px solid #E2E8F0;
+
+      .creator-avatar {
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        background: $color-lemon-yellow;
+        color: $color-pure-black;
+        font-weight: 800;
+        font-size: 0.875rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border: 1px solid rgba(0, 0, 0, 0.1);
+      }
+
+      .creator-text {
+        display: flex;
+        flex-direction: column;
+
+        .creator-name {
+          font-size: 0.875rem;
+          font-weight: 700;
+          color: $color-text-primary;
+        }
+
+        .created-at {
+          font-size: 0.75rem;
+          color: $color-text-muted;
+        }
+      }
+    }
+
+    .detail-section {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+
+      .section-title {
+        font-family: $font-heading;
+        font-size: 0.8125rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        color: $color-text-secondary;
+        margin: 0;
+      }
+
+      .metrics-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 12px;
+
+        .metric-card {
+          background: #FFFFFF;
+          border: 1px solid #E2E8F0;
+          border-radius: $radius-sm;
+          padding: 0.875rem 1rem;
+          display: flex;
+          flex-direction: column;
+          gap: 2px;
+
+          .metric-name {
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: $color-text-muted;
+          }
+
+          .metric-val {
+            font-family: $font-heading;
+            font-size: 1.35rem;
+            font-weight: 800;
+            color: $color-text-primary;
+          }
+
+          .metric-sub {
+            font-size: 0.6875rem;
+            color: $color-text-muted;
+          }
+        }
+      }
+
+      .score-breakdown-card {
+        background: #F8FAFC;
+        border: 1px solid #E2E8F0;
+        border-radius: $radius-sm;
+        padding: 1rem;
+        display: flex;
+        flex-direction: column;
+        gap: 0.625rem;
+
+        .breakdown-row {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+
+          .breakdown-label-group {
+            display: flex;
+            flex-direction: column;
+
+            .breakdown-name {
+              font-size: 0.875rem;
+              font-weight: 600;
+              color: $color-text-primary;
+            }
+
+            .breakdown-math {
+              font-size: 0.75rem;
+              color: $color-text-muted;
+            }
+          }
+
+          .breakdown-points {
+            font-family: $font-heading;
+            font-size: 1rem;
+            font-weight: 700;
+            color: #15803D;
+          }
+
+          &.total-row {
+            margin-top: 4px;
+
+            .total-name {
+              font-size: 1rem;
+              font-weight: 800;
+              color: $color-text-primary;
+            }
+
+            .total-points {
+              font-size: 1.25rem;
+              font-weight: 800;
+              color: $color-lemon-yellow;
+              background: $color-pure-black;
+              padding: 4px 10px;
+              border-radius: $radius-sm;
+            }
+          }
+        }
+
+        .breakdown-divider {
+          height: 1px;
+          background: #E2E8F0;
+
+          &.total-divider {
+            background: #CBD5E1;
+            height: 2px;
+          }
+        }
+      }
+    }
+
+    .detail-footer-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 0.75rem;
+      border-top: 1px solid #F1F5F9;
+      padding-top: 1rem;
+    }
+  }
+}

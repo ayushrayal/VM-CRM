@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { NavLink, useNavigate } from 'react-router-dom';
+import { NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { Badge } from '../common/Badge';
 import { Button } from '../common/Button';
@@ -10,6 +10,7 @@ import './Navbar.scss';
 export const Navbar = () => {
   const { user, signout } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const [isMobileOpen, setIsMobileOpen] = useState(false);
 
   const handleSignout = async () => {
@@ -59,17 +60,26 @@ export const Navbar = () => {
             <div className="nav-gamiply-dropdown">
               <NavLink
                 to="/gamiply/cro"
-                className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}
+                className={({ isActive }) =>
+                  `nav-link ${
+                    isActive ||
+                    location.pathname.startsWith('/gamiply') ||
+                    location.pathname === '/cro-gamiply' ||
+                    location.pathname === '/creative-gamiply'
+                      ? 'active'
+                      : ''
+                  }`
+                }
               >
-                Gamiply ▾
+                Performance ▾
               </NavLink>
               <div className="gamiply-menu">
                 <NavLink to="/gamiply/cro" className="gamiply-item">
-                  🧪 CRO Gamiply
+                  🧪 CRO Performance
                 </NavLink>
-                <div className="gamiply-item disabled">
-                  🎨 Creative Strategist <span className="soon-badge">Soon</span>
-                </div>
+                <NavLink to="/gamiply/creative" className="gamiply-item">
+                  🎨 Creative Performance
+                </NavLink>
               </div>
             </div>
 
