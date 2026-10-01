@@ -285,6 +285,12 @@
               &:hover {
                 background: #DC2626;
               }
+
+              &:disabled {
+                opacity: 0.4;
+                cursor: not-allowed;
+                pointer-events: none;
+              }
             }
 
             .thumb-overlay {
@@ -306,6 +312,24 @@
                 .spinner-dots {
                   font-size: 1rem;
                   letter-spacing: 2px;
+                }
+              }
+
+              &.deleting {
+                background: rgba(185, 28, 28, 0.88);
+                color: #FFFFFF;
+                font-size: 0.65rem;
+                font-weight: 600;
+
+                .spinner-dots {
+                  font-size: 1rem;
+                  letter-spacing: 2px;
+                }
+
+                .status-text {
+                  font-size: 0.6rem;
+                  text-transform: uppercase;
+                  letter-spacing: 0.05em;
                 }
               }
 

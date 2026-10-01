@@ -1,9 +1,13 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Modal } from '../common/Modal';
 import { Button } from '../common/Button';
 import { Input } from '../common/Input';
 import { CRO_STATUSES, CRO_STATUS_CONFIG } from '../../constants/cro.constants';
-import { uploadCroScreenshot } from '../../api/cro.api';
+import {
+  uploadCroScreenshot,
+  deleteCroUpload,
+  deleteCroExperimentImage
+} from '../../api/cro.api';
 import { calculateLiveScore } from '../../utils/croScoring';
 import { resolveImageUrl } from '../../utils/imageUrl';
 import './ExperimentFormModal.scss';
@@ -39,8 +43,15 @@ export const ExperimentFormModal = ({
 
   const [errorMessage, setErrorMessage] = useState('');
   const [pendingUploads, setPendingUploads] = useState([]); // items: { id, type, name, status, errorMsg, file, previewUrl }
+  const [deletingFileIds, setDeletingFileIds] = useState(new Set()); // set of fileIds currently in deletion transit
+
+  // Track newly uploaded fileIds in this modal session for cleanup on cancel/remove
+  const newlyUploadedFileIdsRef = useRef(new Set());
 
   useEffect(() => {
+    newlyUploadedFileIdsRef.current = new Set();
+    setDeletingFileIds(new Set());
+
     if (initialData) {
       setFormData({
         clientName: initialData.clientName || '',
@@ -106,6 +117,11 @@ export const ExperimentFormModal = ({
       const url = res.data?.data?.url || res.data?.url || res.url;
       const fileId = res.data?.data?.fileId || res.data?.fileId || null;
 
+      // Track as newly uploaded in this session for cleanup lifecycle
+      if (fileId) {
+        newlyUploadedFileIdsRef.current.add(fileId);
+      }
+
       // Add to uploaded images list
       setFormData((prev) => ({
         ...prev,
@@ -168,13 +184,69 @@ export const ExperimentFormModal = ({
     e.target.value = '';
   };
 
-  const removeImage = (type, index) => {
-    setFormData((prev) => ({
-      ...prev,
-      [type === 'before' ? 'beforeImages' : 'afterImages']: prev[
-        type === 'before' ? 'beforeImages' : 'afterImages'
-      ].filter((_, i) => i !== index)
-    }));
+  /**
+   * Proper deletion lifecycle:
+   * A) If unsaved (create mode or unsaved additions in edit): calls deleteCroUpload(fileId) immediately
+   * B) If saved in existing experiment: calls deleteCroExperimentImage(expId, fileId) to delete from ImageKit & MongoDB
+   * If deletion fails: keeps image in UI, displays clear error
+   */
+  const removeImage = async (type, index) => {
+    const imageList = type === 'before' ? formData.beforeImages : formData.afterImages;
+    const target = imageList[index];
+    if (!target) return;
+
+    const fileId = target.fileId;
+
+    // Prevent duplicate clicks if already removing
+    if (fileId && deletingFileIds.has(fileId)) return;
+
+    // Fallback if no fileId (e.g. legacy/mock local image)
+    if (!fileId) {
+      setFormData((prev) => ({
+        ...prev,
+        [type === 'before' ? 'beforeImages' : 'afterImages']: prev[
+          type === 'before' ? 'beforeImages' : 'afterImages'
+        ].filter((_, i) => i !== index)
+      }));
+      return;
+    }
+
+    // Set individual image deleting state
+    setDeletingFileIds((prev) => new Set(prev).add(fileId));
+    setErrorMessage('');
+
+    try {
+      const isUnsaved = newlyUploadedFileIdsRef.current.has(fileId) || !isEdit;
+
+      if (isUnsaved) {
+        // Case A: Unsaved image in create form or unsaved additions in edit form
+        await deleteCroUpload(fileId);
+        newlyUploadedFileIdsRef.current.delete(fileId);
+      } else {
+        // Case B: Persisted image in existing experiment
+        await deleteCroExperimentImage(initialData._id, fileId);
+      }
+
+      // Only on successful deletion: remove from local state
+      setFormData((prev) => ({
+        ...prev,
+        [type === 'before' ? 'beforeImages' : 'afterImages']: prev[
+          type === 'before' ? 'beforeImages' : 'afterImages'
+        ].filter((_, i) => i !== index)
+      }));
+    } catch (err) {
+      const errorMsg =
+        err.response?.data?.message ||
+        err.message ||
+        'Failed to remove image. Please try again.';
+      setErrorMessage(`Failed to remove image: ${errorMsg}`);
+    } finally {
+      setDeletingFileIds((prev) => {
+        const next = new Set(prev);
+        next.delete(fileId);
+        return next;
+      });
+    }
   };
 
   const removePendingUpload = (id) => {
@@ -187,6 +259,7 @@ export const ExperimentFormModal = ({
   };
 
   const isUploadingAny = pendingUploads.some((item) => item.status === 'uploading');
+  const isDeletingAny = deletingFileIds.size > 0;
 
   // Live Score Preview
   const liveScore = calculateLiveScore({
@@ -198,7 +271,21 @@ export const ExperimentFormModal = ({
     cancellationAfter: formData.cancellationAfter
   });
 
-  const handleSubmit = (e) => {
+  const handleModalClose = () => {
+    // Clean up any unpersisted uploaded files from ImageKit on modal cancel/close
+    const unpersistedIds = Array.from(newlyUploadedFileIdsRef.current);
+    if (unpersistedIds.length > 0) {
+      unpersistedIds.forEach((fileId) => {
+        deleteCroUpload(fileId).catch((err) => {
+          console.warn(`[Cleanup] Failed to clean up unsaved file ${fileId} on cancel:`, err.message);
+        });
+      });
+      newlyUploadedFileIdsRef.current.clear();
+    }
+    onClose();
+  };
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setErrorMessage('');
 
@@ -226,29 +313,59 @@ export const ExperimentFormModal = ({
       setErrorMessage('Please wait for screenshots to finish uploading before submitting.');
       return;
     }
+    if (isDeletingAny) {
+      setErrorMessage('Please wait for screenshot removal to complete before submitting.');
+      return;
+    }
 
     const payload = {
       clientName: formData.clientName.trim(),
       hypothesisTitle: formData.hypothesisTitle.trim(),
       hypothesis: formData.hypothesis.trim(),
-      startDate: formData.startDate,
-      endDate: formData.endDate || null,
+      startDate: formData.startDate ? String(formData.startDate).trim() : '',
+      endDate: formData.endDate && String(formData.endDate).trim() ? String(formData.endDate).trim() : null,
       status: formData.status,
-      beforeImages: formData.beforeImages,
-      afterImages: formData.afterImages,
+      beforeImages: formData.beforeImages || [],
+      afterImages: formData.afterImages || [],
       results: {
-        salesBefore: formData.salesBefore !== '' ? Number(formData.salesBefore) : null,
-        salesAfter: formData.salesAfter !== '' ? Number(formData.salesAfter) : null,
-        prepaidBefore: formData.prepaidBefore !== '' ? Number(formData.prepaidBefore) : null,
-        prepaidAfter: formData.prepaidAfter !== '' ? Number(formData.prepaidAfter) : null,
+        salesBefore:
+          formData.salesBefore !== '' && !isNaN(Number(formData.salesBefore))
+            ? Number(formData.salesBefore)
+            : null,
+        salesAfter:
+          formData.salesAfter !== '' && !isNaN(Number(formData.salesAfter))
+            ? Number(formData.salesAfter)
+            : null,
+        prepaidBefore:
+          formData.prepaidBefore !== '' && !isNaN(Number(formData.prepaidBefore))
+            ? Number(formData.prepaidBefore)
+            : null,
+        prepaidAfter:
+          formData.prepaidAfter !== '' && !isNaN(Number(formData.prepaidAfter))
+            ? Number(formData.prepaidAfter)
+            : null,
         cancellationBefore:
-          formData.cancellationBefore !== '' ? Number(formData.cancellationBefore) : null,
+          formData.cancellationBefore !== '' && !isNaN(Number(formData.cancellationBefore))
+            ? Number(formData.cancellationBefore)
+            : null,
         cancellationAfter:
-          formData.cancellationAfter !== '' ? Number(formData.cancellationAfter) : null
+          formData.cancellationAfter !== '' && !isNaN(Number(formData.cancellationAfter))
+            ? Number(formData.cancellationAfter)
+            : null
       }
     };
 
-    onSubmit(payload);
+    console.log('[CRO CREATE] Submitting payload:', payload);
+
+    try {
+      await onSubmit(payload);
+      newlyUploadedFileIdsRef.current.clear();
+    } catch (err) {
+      console.error('[CRO CREATE] Form submission failed:', err);
+      const fieldErrors = (err.errors || []).map((e) => e.message || `${e.field} is invalid`).join(', ');
+      const msg = fieldErrors ? `Validation failed: ${fieldErrors}` : (err.message || 'Failed to save experiment');
+      setErrorMessage(msg);
+    }
   };
 
   const beforePending = pendingUploads.filter((item) => item.type === 'before');
@@ -257,7 +374,7 @@ export const ExperimentFormModal = ({
   return (
     <Modal
       isOpen={isOpen}
-      onClose={onClose}
+      onClose={handleModalClose}
       title={isEdit ? 'Edit CRO Experiment' : 'Create New CRO Experiment'}
       size="xl"
       className="cro-experiment-modal"
@@ -381,29 +498,43 @@ export const ExperimentFormModal = ({
                 ) : (
                   <div className="thumbnails-compact-grid">
                     {/* Uploaded items */}
-                    {formData.beforeImages.map((img, idx) => (
-                      <div key={`before-${idx}`} className="thumb-item" title={img.name || `Image #${idx + 1}`}>
-                        <div className="img-wrapper">
-                          <img
-                            src={resolveImageUrl(img.url)}
-                            alt={img.name || 'Before screenshot'}
-                            onError={(e) => {
-                              e.target.style.display = 'none';
-                              e.target.parentNode.classList.add('broken-img');
-                            }}
-                          />
-                          <button
-                            type="button"
-                            className="thumb-remove-btn"
-                            onClick={() => removeImage('before', idx)}
-                            title="Remove image"
-                          >
-                            &times;
-                          </button>
+                    {formData.beforeImages.map((img, idx) => {
+                      const isDeleting = Boolean(img.fileId && deletingFileIds.has(img.fileId));
+                      return (
+                        <div
+                          key={`before-${img.fileId || idx}`}
+                          className={`thumb-item ${isDeleting ? 'is-deleting' : ''}`}
+                          title={img.name || `Image #${idx + 1}`}
+                        >
+                          <div className="img-wrapper">
+                            <img
+                              src={resolveImageUrl(img.url)}
+                              alt={img.name || 'Before screenshot'}
+                              onError={(e) => {
+                                e.target.style.display = 'none';
+                                e.target.parentNode.classList.add('broken-img');
+                              }}
+                            />
+                            {isDeleting && (
+                              <div className="thumb-overlay deleting">
+                                <span className="spinner-dots">...</span>
+                                <span className="status-text">Removing</span>
+                              </div>
+                            )}
+                            <button
+                              type="button"
+                              className="thumb-remove-btn"
+                              onClick={() => removeImage('before', idx)}
+                              disabled={isDeleting}
+                              title={isDeleting ? 'Removing...' : 'Remove image'}
+                            >
+                              &times;
+                            </button>
+                          </div>
+                          <span className="thumb-name">{img.name || `Image #${idx + 1}`}</span>
                         </div>
-                        <span className="thumb-name">{img.name || `Image #${idx + 1}`}</span>
-                      </div>
-                    ))}
+                      );
+                    })}
 
                     {/* Pending upload items */}
                     {beforePending.map((p) => (
@@ -472,29 +603,43 @@ export const ExperimentFormModal = ({
                 ) : (
                   <div className="thumbnails-compact-grid">
                     {/* Uploaded items */}
-                    {formData.afterImages.map((img, idx) => (
-                      <div key={`after-${idx}`} className="thumb-item" title={img.name || `Image #${idx + 1}`}>
-                        <div className="img-wrapper">
-                          <img
-                            src={resolveImageUrl(img.url)}
-                            alt={img.name || 'After screenshot'}
-                            onError={(e) => {
-                              e.target.style.display = 'none';
-                              e.target.parentNode.classList.add('broken-img');
-                            }}
-                          />
-                          <button
-                            type="button"
-                            className="thumb-remove-btn"
-                            onClick={() => removeImage('after', idx)}
-                            title="Remove image"
-                          >
-                            &times;
-                          </button>
+                    {formData.afterImages.map((img, idx) => {
+                      const isDeleting = Boolean(img.fileId && deletingFileIds.has(img.fileId));
+                      return (
+                        <div
+                          key={`after-${img.fileId || idx}`}
+                          className={`thumb-item ${isDeleting ? 'is-deleting' : ''}`}
+                          title={img.name || `Image #${idx + 1}`}
+                        >
+                          <div className="img-wrapper">
+                            <img
+                              src={resolveImageUrl(img.url)}
+                              alt={img.name || 'After screenshot'}
+                              onError={(e) => {
+                                e.target.style.display = 'none';
+                                e.target.parentNode.classList.add('broken-img');
+                              }}
+                            />
+                            {isDeleting && (
+                              <div className="thumb-overlay deleting">
+                                <span className="spinner-dots">...</span>
+                                <span className="status-text">Removing</span>
+                              </div>
+                            )}
+                            <button
+                              type="button"
+                              className="thumb-remove-btn"
+                              onClick={() => removeImage('after', idx)}
+                              disabled={isDeleting}
+                              title={isDeleting ? 'Removing...' : 'Remove image'}
+                            >
+                              &times;
+                            </button>
+                          </div>
+                          <span className="thumb-name">{img.name || `Image #${idx + 1}`}</span>
                         </div>
-                        <span className="thumb-name">{img.name || `Image #${idx + 1}`}</span>
-                      </div>
-                    ))}
+                      );
+                    })}
 
                     {/* Pending upload items */}
                     {afterPending.map((p) => (
@@ -777,18 +922,25 @@ export const ExperimentFormModal = ({
 
         {/* Sticky Modal Footer Actions */}
         <div className="cro-modal-footer">
-          <Button type="button" variant="ghost" onClick={onClose} disabled={isSubmitting}>
+          <Button
+            type="button"
+            variant="ghost"
+            onClick={handleModalClose}
+            disabled={isSubmitting || isDeletingAny}
+          >
             Cancel
           </Button>
           <Button
             type="submit"
             variant="primary"
-            disabled={isSubmitting || isUploadingAny}
+            disabled={isSubmitting || isUploadingAny || isDeletingAny}
           >
             {isSubmitting
               ? 'Saving...'
               : isUploadingAny
               ? 'Uploading Screenshots...'
+              : isDeletingAny
+              ? 'Removing Image...'
               : isEdit
               ? 'Update Experiment'
               : 'Create Experiment'}

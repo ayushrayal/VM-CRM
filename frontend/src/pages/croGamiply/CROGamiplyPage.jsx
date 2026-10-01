@@ -135,7 +135,10 @@ export const CROGamiplyPage = () => {
       fetchStats();
       if (activeTab === 'leaderboard') fetchLeaderboard();
     } catch (err) {
-      showToast(err.message || 'Failed to save experiment', 'error');
+      const fieldErrors = (err.errors || []).map((e) => e.message || `${e.field} is invalid`).join(', ');
+      const msg = fieldErrors ? `Validation failed: ${fieldErrors}` : (err.message || 'Failed to save experiment');
+      showToast(msg, 'error');
+      throw err;
     } finally {
       setIsSubmitting(false);
     }

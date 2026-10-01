@@ -31,3 +31,12 @@ export const getCroStats = async () => {
 export const uploadCroScreenshot = async (base64Image, name = 'screenshot', type = 'before') => {
   return await api.post('/cro/upload', { image: base64Image, name, type });
 };
+
+export const deleteCroUpload = async (fileId) => {
+  return await api.delete(`/cro/upload/${encodeURIComponent(fileId)}`);
+};
+
+export const deleteCroExperimentImage = async (experimentId, fileId) => {
+  return await api.delete(`/cro/experiments/${experimentId}/images/${encodeURIComponent(fileId)}`);
+};
+
