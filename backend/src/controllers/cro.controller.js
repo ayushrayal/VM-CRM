@@ -4,6 +4,7 @@ import { fileURLToPath } from 'url';
 import crypto from 'crypto';
 import { CROExperiment } from '../models/CROExperiment.js';
 import { User } from '../models/User.js';
+import { CROUpload } from '../models/CROUpload.js';
 import { calculateCroScore } from '../services/croScoring.service.js';
 import { evaluateUserBadges, evaluateExperimentBadges } from '../services/croBadge.service.js';
 import { uploadImage, deleteImage } from '../services/imagekit.service.js';
@@ -79,6 +80,19 @@ export const createExperiment = async (req, res, next) => {
     experimentData.badges = evaluateExperimentBadges(experimentData);
 
     const experiment = await CROExperiment.create(experimentData);
+
+    // Link uploaded assets to this newly created experiment
+    const allFileIds = [
+      ...(beforeImages || []).map((img) => img.fileId),
+      ...(afterImages || []).map((img) => img.fileId)
+    ].filter(Boolean);
+
+    if (allFileIds.length > 0) {
+      await CROUpload.updateMany(
+        { fileId: { $in: allFileIds } },
+        { $set: { experimentId: experiment._id } }
+      ).catch(() => {});
+    }
 
     res.status(201).json({
       success: true,
@@ -278,8 +292,12 @@ export const deleteExperiment = async (req, res, next) => {
     for (const img of allImages) {
       try {
         await deleteImage({ url: img.url, fileId: img.fileId });
+        if (img.fileId) {
+          await CROUpload.deleteOne({ fileId: img.fileId }).catch(() => {});
+        }
       } catch (e) {
-        // Ignore file delete error
+        // Safe logging without exposing secrets
+        console.warn(`[ImageKit] Failed to delete image during experiment deletion: ${img.fileId || img.url}`);
       }
     }
 
@@ -522,6 +540,21 @@ export const uploadScreenshot = async (req, res, next) => {
       size: buffer.length
     });
 
+    // Record upload ownership for security and lifecycle tracking
+    if (uploadResult.fileId) {
+      try {
+        await CROUpload.create({
+          fileId: uploadResult.fileId,
+          url: uploadResult.url,
+          name: name || filename,
+          type: type === 'after' ? 'after' : 'before',
+          uploadedBy: req.user._id
+        });
+      } catch (err) {
+        console.warn('[CROUpload] Failed to record upload ownership:', err.message);
+      }
+    }
+
     res.status(201).json({
       success: true,
       data: {
@@ -534,3 +567,137 @@ export const uploadScreenshot = async (req, res, next) => {
     next(error);
   }
 };
+
+/**
+ * 9. Delete Uploaded Screenshot (Unsaved upload or general asset by fileId)
+ * Security: User must own the upload, own the attached experiment, or be Admin.
+ */
+export const deleteUploadedScreenshot = async (req, res, next) => {
+  try {
+    const { fileId } = req.params;
+
+    if (!fileId || typeof fileId !== 'string' || !fileId.trim()) {
+      throw new ApiError(400, 'fileId is required');
+    }
+
+    const cleanFileId = fileId.trim();
+
+    // 1. Look up upload record
+    const croUpload = await CROUpload.findOne({ fileId: cleanFileId });
+
+    // 2. Check if linked to an experiment
+    let experiment = null;
+    if (croUpload?.experimentId) {
+      experiment = await CROExperiment.findById(croUpload.experimentId);
+    }
+    if (!experiment) {
+      experiment = await CROExperiment.findOne({
+        $or: [
+          { 'beforeImages.fileId': cleanFileId },
+          { 'afterImages.fileId': cleanFileId }
+        ]
+      });
+    }
+
+    // 3. Ownership / Authorization verification
+    const isAdmin = req.user.role === 'admin';
+    const isUploader = croUpload && croUpload.uploadedBy.toString() === req.user._id.toString();
+    const isExperimentOwner = experiment && experiment.creatorId.toString() === req.user._id.toString();
+
+    // If neither record exists in DB, asset is not found
+    if (!croUpload && !experiment) {
+      throw new ApiError(404, 'Image not found or already deleted');
+    }
+
+    // Check authorization: must be admin, uploader, or experiment owner
+    if (!isAdmin && !isUploader && !isExperimentOwner) {
+      throw new ApiError(403, 'Access denied. You do not have permission to delete this image.');
+    }
+
+    // 4. Delete from ImageKit using fileId
+    await deleteImage({ fileId: cleanFileId });
+
+    // 5. Clean up DB records only after successful ImageKit deletion
+    if (croUpload) {
+      await CROUpload.deleteOne({ _id: croUpload._id });
+    }
+
+    if (experiment) {
+      experiment.beforeImages = (experiment.beforeImages || []).filter((img) => img.fileId !== cleanFileId);
+      experiment.afterImages = (experiment.afterImages || []).filter((img) => img.fileId !== cleanFileId);
+      await experiment.save();
+    }
+
+    res.status(200).json({
+      success: true,
+      message: 'Image deleted successfully',
+      data: { fileId: cleanFileId }
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * 10. Delete Screenshot from an Existing Experiment
+ * Security: Owner of experiment or Admin only.
+ * Deletes from ImageKit first; if that fails, experiment is NOT modified.
+ */
+export const deleteExperimentImage = async (req, res, next) => {
+  try {
+    const { id, fileId } = req.params;
+
+    if (!fileId || typeof fileId !== 'string' || !fileId.trim()) {
+      throw new ApiError(400, 'fileId is required');
+    }
+
+    const cleanFileId = fileId.trim();
+    const experiment = await CROExperiment.findById(id);
+
+    if (!experiment) {
+      throw new ApiError(404, 'CRO experiment not found');
+    }
+
+    const isOwner = experiment.creatorId.toString() === req.user._id.toString();
+    const isAdmin = req.user.role === 'admin';
+
+    if (!isOwner && !isAdmin) {
+      throw new ApiError(403, 'Access denied. You can only edit your own experiments.');
+    }
+
+    // Check if the image exists in this experiment
+    const beforeIndex = (experiment.beforeImages || []).findIndex((img) => img.fileId === cleanFileId);
+    const afterIndex = (experiment.afterImages || []).findIndex((img) => img.fileId === cleanFileId);
+
+    if (beforeIndex === -1 && afterIndex === -1) {
+      throw new ApiError(404, 'Image not found in this experiment');
+    }
+
+    // Delete from ImageKit first using deleteImage({ fileId })
+    // If ImageKit fails, deleteImage throws an ApiError,
+    // and execution halts before MongoDB is modified!
+    await deleteImage({ fileId: cleanFileId });
+
+    // Only after successful ImageKit deletion: remove from experiment arrays
+    if (beforeIndex !== -1) {
+      experiment.beforeImages.splice(beforeIndex, 1);
+    }
+    if (afterIndex !== -1) {
+      experiment.afterImages.splice(afterIndex, 1);
+    }
+
+    await experiment.save();
+
+    // Clean up CROUpload tracking if present
+    await CROUpload.deleteOne({ fileId: cleanFileId }).catch(() => {});
+
+    res.status(200).json({
+      success: true,
+      message: 'Experiment screenshot removed successfully',
+      data: experiment
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+

@@ -1,4 +1,11 @@
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
 import { ApiError } from '../utils/ApiError.js';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const logFile = path.resolve(__dirname, '../../validation-debug.log');
 
 export const validate = (schema) => async (req, res, next) => {
   try {
@@ -34,6 +41,15 @@ export const validate = (schema) => async (req, res, next) => {
         field: err.path ? err.path.join('.').replace(/^(body|query|params)\./, '') : '',
         message: err.message
       }));
+      console.error(`[Validation Failed] ${req.method} ${req.originalUrl}`);
+      console.error('  Fields:', Object.keys(req.body || {}));
+      console.error('  Formatted errors:', JSON.stringify(formattedErrors));
+
+      try {
+        const entry = `[${new Date().toISOString()}] VALIDATION FAILED: ${req.method} ${req.originalUrl}\nErrors: ${JSON.stringify(formattedErrors, null, 2)}\nBody: ${JSON.stringify(req.body, null, 2)}\n\n`;
+        fs.appendFileSync(logFile, entry);
+      } catch (logErr) {}
+
       return next(new ApiError(400, 'Validation failed', formattedErrors));
     }
     next(error);

@@ -6,7 +6,9 @@ import {
   updateCroExperimentSchema,
   croExperimentIdParamSchema,
   leaderboardQuerySchema,
-  listCroExperimentsQuerySchema
+  listCroExperimentsQuerySchema,
+  deleteCroUploadParamSchema,
+  deleteCroExperimentImageParamSchema
 } from '../validators/cro.validator.js';
 import {
   createExperiment,
@@ -16,7 +18,9 @@ import {
   deleteExperiment,
   getLeaderboard,
   getCroStats,
-  uploadScreenshot
+  uploadScreenshot,
+  deleteUploadedScreenshot,
+  deleteExperimentImage
 } from '../controllers/cro.controller.js';
 
 const router = express.Router();
@@ -28,8 +32,9 @@ router.use(authGuard);
 router.get('/leaderboard', validate(leaderboardQuerySchema), getLeaderboard);
 router.get('/stats', getCroStats);
 
-// Screenshot upload with 10mb json body limit for base64 image data
+// Screenshot upload & deletion
 router.post('/upload', express.json({ limit: '10mb' }), uploadScreenshot);
+router.delete('/upload/:fileId', validate(deleteCroUploadParamSchema), deleteUploadedScreenshot);
 
 // Experiments CRUD
 router.post('/experiments', validate(createCroExperimentSchema), createExperiment);
@@ -37,5 +42,10 @@ router.get('/experiments', validate(listCroExperimentsQuerySchema), getExperimen
 router.get('/experiments/:id', validate(croExperimentIdParamSchema), getExperimentById);
 router.patch('/experiments/:id', validate(updateCroExperimentSchema), updateExperiment);
 router.delete('/experiments/:id', validate(croExperimentIdParamSchema), deleteExperiment);
+router.delete(
+  '/experiments/:id/images/:fileId',
+  validate(deleteCroExperimentImageParamSchema),
+  deleteExperimentImage
+);
 
 export default router;

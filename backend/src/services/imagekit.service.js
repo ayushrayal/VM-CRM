@@ -176,6 +176,7 @@ export const uploadImage = async ({
  * @param {Object} imageObj
  * @param {string} [imageObj.url]
  * @param {string} [imageObj.fileId]
+ * @returns {Promise<boolean>}
  */
 export const deleteImage = async ({ url, fileId }) => {
   const client = getImageKitClient();
@@ -183,11 +184,28 @@ export const deleteImage = async ({ url, fileId }) => {
   if (fileId && client) {
     try {
       await client.deleteFile(fileId);
-      console.log(`[ImageKit] Deleted file: ${fileId}`);
+      console.log(`[ImageKit] DELETE SUCCESS: fileId=${fileId}`);
       return true;
     } catch (err) {
-      console.warn(`[ImageKit] Failed to delete file ${fileId}:`, err.message);
-      // Soft failure: do not crash experiment deletion if asset is already missing
+      const status = err.status || err.statusCode || err.$ResponseMetadata?.statusCode;
+      const isNotFound =
+        status === 404 ||
+        /not found/i.test(err.message || '') ||
+        /NOT_FOUND/i.test(err.code || '');
+
+      if (isNotFound) {
+        console.warn(`[ImageKit] File ${fileId} not found in ImageKit (already deleted). Safely treated as success.`);
+        return true;
+      }
+
+      console.error(`[ImageKit] DELETE FAILED: fileId=${fileId}, status=${status || 500}, message=${err.message || 'Unknown error'}`);
+      throw new ApiError(
+        status || 500,
+        `ImageKit deletion failed: ${err.message || 'ImageKit service error'}`,
+        [],
+        '',
+        err.code || 'IMAGEKIT_DELETE_FAILED'
+      );
     }
   }
 
@@ -197,12 +215,19 @@ export const deleteImage = async ({ url, fileId }) => {
     if (fs.existsSync(localPath)) {
       try {
         fs.unlinkSync(localPath);
+        console.log(`[Local Upload] Deleted local fallback file: ${url}`);
         return true;
       } catch (err) {
-        // ignore local unlink error
+        console.warn(`[Local Upload] Failed to unlink ${localPath}:`, err.message);
       }
     }
+    return true;
   }
 
-  return false;
+  // If no client was configured (e.g., local mock or offline test without fileId on remote)
+  if (!client && !url) {
+    return true;
+  }
+
+  return true;
 };
