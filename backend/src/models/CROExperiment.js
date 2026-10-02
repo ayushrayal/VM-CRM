@@ -35,6 +35,11 @@ const croExperimentSchema = new mongoose.Schema(
       required: [true, 'Creator name snapshot is required'],
       trim: true
     },
+    clientId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Client',
+      index: true
+    },
     clientName: {
       type: String,
       required: [true, 'Client name is required'],

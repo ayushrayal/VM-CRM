@@ -10,6 +10,7 @@ import {
 } from '../../api/cro.api';
 import { calculateLiveScore } from '../../utils/croScoring';
 import { resolveImageUrl } from '../../utils/imageUrl';
+import { ClientSelect } from '../common/ClientSelect';
 import './ExperimentFormModal.scss';
 
 const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
@@ -25,6 +26,7 @@ export const ExperimentFormModal = ({
   const isEdit = Boolean(initialData?._id);
 
   const [formData, setFormData] = useState({
+    clientId: null,
     clientName: '',
     hypothesisTitle: '',
     hypothesis: '',
@@ -36,9 +38,7 @@ export const ExperimentFormModal = ({
     salesBefore: '',
     salesAfter: '',
     prepaidBefore: '',
-    prepaidAfter: '',
-    cancellationBefore: '',
-    cancellationAfter: ''
+    prepaidAfter: ''
   });
 
   const [errorMessage, setErrorMessage] = useState('');
@@ -54,7 +54,8 @@ export const ExperimentFormModal = ({
 
     if (initialData) {
       setFormData({
-        clientName: initialData.clientName || '',
+        clientId: initialData.clientId?._id || initialData.clientId || null,
+        clientName: initialData.clientName || initialData.clientId?.clientName || initialData.clientId?.name || '',
         hypothesisTitle: initialData.hypothesisTitle || '',
         hypothesis: initialData.hypothesis || '',
         startDate: initialData.startDate
@@ -69,12 +70,11 @@ export const ExperimentFormModal = ({
         salesBefore: initialData.results?.salesBefore ?? '',
         salesAfter: initialData.results?.salesAfter ?? '',
         prepaidBefore: initialData.results?.prepaidBefore ?? '',
-        prepaidAfter: initialData.results?.prepaidAfter ?? '',
-        cancellationBefore: initialData.results?.cancellationBefore ?? '',
-        cancellationAfter: initialData.results?.cancellationAfter ?? ''
+        prepaidAfter: initialData.results?.prepaidAfter ?? ''
       });
     } else {
       setFormData({
+        clientId: null,
         clientName: '',
         hypothesisTitle: '',
         hypothesis: '',
@@ -86,9 +86,7 @@ export const ExperimentFormModal = ({
         salesBefore: '',
         salesAfter: '',
         prepaidBefore: '',
-        prepaidAfter: '',
-        cancellationBefore: '',
-        cancellationAfter: ''
+        prepaidAfter: ''
       });
     }
     setErrorMessage('');
@@ -262,14 +260,15 @@ export const ExperimentFormModal = ({
   const isDeletingAny = deletingFileIds.size > 0;
 
   // Live Score Preview
-  const liveScore = calculateLiveScore({
-    salesBefore: formData.salesBefore,
-    salesAfter: formData.salesAfter,
-    prepaidBefore: formData.prepaidBefore,
-    prepaidAfter: formData.prepaidAfter,
-    cancellationBefore: formData.cancellationBefore,
-    cancellationAfter: formData.cancellationAfter
-  });
+  const liveScore = calculateLiveScore(
+    {
+      salesBefore: formData.salesBefore,
+      salesAfter: formData.salesAfter,
+      prepaidBefore: formData.prepaidBefore,
+      prepaidAfter: formData.prepaidAfter
+    },
+    formData.status
+  );
 
   const handleModalClose = () => {
     // Clean up any unpersisted uploaded files from ImageKit on modal cancel/close
@@ -289,8 +288,8 @@ export const ExperimentFormModal = ({
     e.preventDefault();
     setErrorMessage('');
 
-    if (!formData.clientName.trim()) {
-      setErrorMessage('Client name is required.');
+    if (!formData.clientName.trim() && !formData.clientId) {
+      setErrorMessage('Client is required.');
       return;
     }
     if (!formData.hypothesisTitle.trim()) {
@@ -319,6 +318,7 @@ export const ExperimentFormModal = ({
     }
 
     const payload = {
+      clientId: formData.clientId || undefined,
       clientName: formData.clientName.trim(),
       hypothesisTitle: formData.hypothesisTitle.trim(),
       hypothesis: formData.hypothesis.trim(),
@@ -343,14 +343,6 @@ export const ExperimentFormModal = ({
         prepaidAfter:
           formData.prepaidAfter !== '' && !isNaN(Number(formData.prepaidAfter))
             ? Number(formData.prepaidAfter)
-            : null,
-        cancellationBefore:
-          formData.cancellationBefore !== '' && !isNaN(Number(formData.cancellationBefore))
-            ? Number(formData.cancellationBefore)
-            : null,
-        cancellationAfter:
-          formData.cancellationAfter !== '' && !isNaN(Number(formData.cancellationAfter))
-            ? Number(formData.cancellationAfter)
             : null
       }
     };
@@ -391,12 +383,18 @@ export const ExperimentFormModal = ({
             </div>
 
             <div className="form-grid two-cols">
-              <Input
-                label="Client Name *"
-                placeholder="e.g. HealthGlow, UrbanFit"
-                value={formData.clientName}
-                onChange={(e) => setFormData({ ...formData, clientName: e.target.value })}
+              <ClientSelect
+                label="Client"
                 required
+                value={formData.clientId || formData.clientName}
+                onChange={(client) => {
+                  setFormData((prev) => ({
+                    ...prev,
+                    clientId: client.clientId,
+                    clientName: client.clientName
+                  }));
+                }}
+                placeholder="Search or select client from central directory..."
               />
 
               <div className="input-group">
@@ -728,7 +726,7 @@ export const ExperimentFormModal = ({
 
                 <div className="metric-card-footer">
                   <div className="stat-row">
-                    <span className="stat-label">Improvement:</span>
+                    <span className="stat-label">Uplift:</span>
                     <span
                       className={`improvement-badge ${
                         liveScore.salesPercent > 0
@@ -743,12 +741,6 @@ export const ExperimentFormModal = ({
                           ? `+${liveScore.salesPercent}%`
                           : `${liveScore.salesPercent}%`
                         : '—'}
-                    </span>
-                  </div>
-                  <div className="stat-row">
-                    <span className="stat-label">Points:</span>
-                    <span className="points-highlight">
-                      {liveScore.salesPoints > 0 ? `+${liveScore.salesPoints} pts` : '0 pts'}
                     </span>
                   </div>
                 </div>
@@ -793,7 +785,7 @@ export const ExperimentFormModal = ({
 
                 <div className="metric-card-footer">
                   <div className="stat-row">
-                    <span className="stat-label">Improvement:</span>
+                    <span className="stat-label">Uplift:</span>
                     <span
                       className={`improvement-badge ${
                         liveScore.prepaidDiff > 0
@@ -810,77 +802,6 @@ export const ExperimentFormModal = ({
                         : '—'}
                     </span>
                   </div>
-                  <div className="stat-row">
-                    <span className="stat-label">Points:</span>
-                    <span className="points-highlight">
-                      {liveScore.prepaidPoints > 0 ? `+${liveScore.prepaidPoints} pts` : '0 pts'}
-                    </span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Metric Card 3: Cancellation Rate */}
-              <div className="metric-card">
-                <div className="metric-card-header">
-                  <span className="metric-icon">📉</span>
-                  <span className="metric-title">Cancellation Rate (%)</span>
-                </div>
-
-                <div className="inputs-pair-container">
-                  <div className="input-subgroup">
-                    <span className="sub-label">Before</span>
-                    <input
-                      type="number"
-                      placeholder="0"
-                      min="0"
-                      max="100"
-                      step="0.1"
-                      value={formData.cancellationBefore}
-                      onChange={(e) => setFormData({ ...formData, cancellationBefore: e.target.value })}
-                    />
-                  </div>
-
-                  <span className="arrow-divider">→</span>
-
-                  <div className="input-subgroup">
-                    <span className="sub-label">After</span>
-                    <input
-                      type="number"
-                      placeholder="0"
-                      min="0"
-                      max="100"
-                      step="0.1"
-                      value={formData.cancellationAfter}
-                      onChange={(e) => setFormData({ ...formData, cancellationAfter: e.target.value })}
-                    />
-                  </div>
-                </div>
-
-                <div className="metric-card-footer">
-                  <div className="stat-row">
-                    <span className="stat-label">Improvement:</span>
-                    <span
-                      className={`improvement-badge ${
-                        liveScore.cancellationPoints > 0
-                          ? 'positive'
-                          : liveScore.cancellationDiff > 0
-                          ? 'negative'
-                          : ''
-                      }`}
-                    >
-                      {liveScore.cancellationDiff !== null
-                        ? liveScore.cancellationDiff > 0
-                          ? `+${liveScore.cancellationDiff} pp`
-                          : `${liveScore.cancellationDiff} pp`
-                        : '—'}
-                    </span>
-                  </div>
-                  <div className="stat-row">
-                    <span className="stat-label">Points:</span>
-                    <span className="points-highlight">
-                      {liveScore.cancellationPoints > 0 ? `+${liveScore.cancellationPoints} pts` : '0 pts'}
-                    </span>
-                  </div>
                 </div>
               </div>
             </div>
@@ -891,30 +812,30 @@ export const ExperimentFormModal = ({
             <div className="section-header">
               <span className="section-number">5</span>
               <h4 className="section-title">Estimated Score</h4>
-              <span className="server-notice">⚡ Final points verified by backend upon save</span>
+              <span className="server-notice">⚡ +1 pt for Product Sales & +1 pt for Prepaid Orders % (Max 2 pts)</span>
             </div>
 
             <div className="estimated-score-card">
-              <div className="breakdown-grid">
-                <div className="score-item">
-                  <span className="item-label">Sales Points</span>
-                  <span className="item-val">+{liveScore.salesPoints}</span>
+              <div className="simplified-cro-scoring-info">
+                <div className="status-evaluation-row">
+                  <span className="info-title">Score Breakdown:</span>
+                  <div className="score-metrics-breakdown" style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                    <span className={`eval-status-pill ${liveScore.salesPoints > 0 ? 'is-success' : ''}`}>
+                      Sales: {liveScore.salesPoints > 0 ? '+1 pt' : '0 pts'}
+                    </span>
+                    <span className={`eval-status-pill ${liveScore.prepaidPoints > 0 ? 'is-success' : ''}`}>
+                      Prepaid %: {liveScore.prepaidPoints > 0 ? '+1 pt' : '0 pts'}
+                    </span>
+                  </div>
                 </div>
-                <div className="score-divider">+</div>
-                <div className="score-item">
-                  <span className="item-label">Prepaid Points</span>
-                  <span className="item-val">+{liveScore.prepaidPoints}</span>
-                </div>
-                <div className="score-divider">+</div>
-                <div className="score-item">
-                  <span className="item-label">Cancellation Points</span>
-                  <span className="item-val">+{liveScore.cancellationPoints}</span>
-                </div>
+                <p className="scoring-rule-note">
+                  Each improved metric (After &gt; Before) awards exactly 1 point. Maximum score is 2 points per experiment.
+                </p>
               </div>
 
               <div className="total-highlight">
-                <span className="total-label">TOTAL ESTIMATED POINTS</span>
-                <span className="total-value">+{liveScore.totalPoints} pts</span>
+                <span className="total-label">TOTAL CRO POINTS</span>
+                <span className="total-value">+{liveScore.totalPoints} pt{liveScore.totalPoints === 1 ? '' : 's'}</span>
               </div>
             </div>
           </div>

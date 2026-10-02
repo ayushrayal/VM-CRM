@@ -3,7 +3,7 @@ import { ApiResponse } from '../utils/ApiResponse.js';
 
 export const handleGetAllClients = async (req, res, next) => {
   try {
-    const clients = await clientService.getAllClients();
+    const clients = await clientService.getAllClients(req.query);
     res.status(200).json(new ApiResponse(200, clients, 'Clients retrieved successfully'));
   } catch (error) {
     next(error);

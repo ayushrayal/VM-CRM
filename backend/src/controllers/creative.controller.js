@@ -1,30 +1,67 @@
 import { CreativePerformance } from '../models/CreativePerformance.js';
+import { Client } from '../models/Client.js';
 import { User } from '../models/User.js';
 import { calculateCreativeScore } from '../services/creativeScoring.service.js';
 import { CREATIVE_STATUS, LEADERBOARD_PERIOD } from '../constants/creative.constants.js';
 import { ApiError } from '../utils/ApiError.js';
 
 /**
- * 1. Create a new Creative Gamiply entry
+ * 1. Create a new Creative Performance entry
  * Any authenticated user can create.
  */
 export const createCreative = async (req, res, next) => {
   try {
-    const { clientName, adName, roas, purchases, status } = req.body;
+    const { clientId, clientName, adName, roas, status, purchases, baselineROAS, previousROAS } = req.body;
 
-    // Server-side scoring calculation ONLY. Never trust frontend score.
-    const score = calculateCreativeScore({ roas, purchases });
+    let resolvedClientId = clientId;
+    let resolvedClientName = clientName ? clientName.trim() : '';
+    let resolvedBaselineROAS = baselineROAS !== undefined && baselineROAS !== null
+      ? Number(baselineROAS)
+      : previousROAS !== undefined && previousROAS !== null
+      ? Number(previousROAS)
+      : undefined;
+
+    // Resolve client from MongoDB
+    let clientDoc = null;
+    if (resolvedClientId) {
+      clientDoc = await Client.findById(resolvedClientId);
+    } else if (resolvedClientName) {
+      clientDoc = await Client.findOne({ normalizedName: resolvedClientName.toLowerCase() });
+    }
+
+    if (clientDoc) {
+      resolvedClientId = clientDoc._id;
+      resolvedClientName = clientDoc.clientName || clientDoc.name;
+      resolvedBaselineROAS = clientDoc.baselineROAS ?? 0;
+    } else if (resolvedBaselineROAS === undefined) {
+      resolvedBaselineROAS = 0;
+    }
+
+    // Calculate score: +1 point if roas > baselineROAS, 0 otherwise
+    const score = calculateCreativeScore({
+      roas: Number(roas),
+      baselineROAS: resolvedBaselineROAS
+    });
 
     const creative = await CreativePerformance.create({
       creatorId: req.user._id,
       creatorName: req.user.name,
-      clientName: clientName.trim(),
+      clientId: resolvedClientId || null,
+      clientName: resolvedClientName,
       adName: adName.trim(),
+      baselineROAS: resolvedBaselineROAS,
+      previousROAS: resolvedBaselineROAS,
       roas: Number(roas),
-      purchases: Number(purchases),
+      purchases: purchases !== undefined ? Number(purchases) : 0,
       status,
       score
     });
+
+    // Current ROAS must reflect the latest recorded creative performance for that client
+    if (clientDoc) {
+      clientDoc.currentROAS = Number(roas);
+      await clientDoc.save().catch(() => {});
+    }
 
     res.status(201).json({
       success: true,
@@ -38,11 +75,10 @@ export const createCreative = async (req, res, next) => {
 
 /**
  * 2. Get Creative entries with optional filters & search
- * Any authenticated user can view.
  */
 export const getCreatives = async (req, res, next) => {
   try {
-    const { status, creatorId, clientName, search } = req.query;
+    const { status, creatorId, clientId, clientName, search } = req.query;
     const filter = {};
 
     if (status && Object.values(CREATIVE_STATUS).includes(status)) {
@@ -51,6 +87,10 @@ export const getCreatives = async (req, res, next) => {
 
     if (creatorId) {
       filter.creatorId = creatorId;
+    }
+
+    if (clientId) {
+      filter.clientId = clientId;
     }
 
     if (clientName) {
@@ -68,7 +108,8 @@ export const getCreatives = async (req, res, next) => {
 
     const creatives = await CreativePerformance.find(filter)
       .sort({ createdAt: -1 })
-      .populate('creatorId', 'name email role teamRole');
+      .populate('creatorId', 'name email role teamRole')
+      .populate('clientId', 'name clientName baselineROAS currentROAS');
 
     res.status(200).json({
       success: true,
@@ -82,14 +123,12 @@ export const getCreatives = async (req, res, next) => {
 
 /**
  * 3. Get single creative by ID
- * Any authenticated user can view.
  */
 export const getCreativeById = async (req, res, next) => {
   try {
-    const creative = await CreativePerformance.findById(req.params.id).populate(
-      'creatorId',
-      'name email role teamRole'
-    );
+    const creative = await CreativePerformance.findById(req.params.id)
+      .populate('creatorId', 'name email role teamRole')
+      .populate('clientId', 'name clientName baselineROAS currentROAS');
 
     if (!creative) {
       throw new ApiError(404, 'Creative entry not found');
@@ -123,28 +162,46 @@ export const updateCreative = async (req, res, next) => {
       throw new ApiError(403, 'Access denied. You can only edit your own creatives.');
     }
 
-    const { clientName, adName, roas, purchases, status } = req.body;
+    const { clientId, clientName, adName, roas, status, purchases, baselineROAS, previousROAS } = req.body;
 
     if (clientName !== undefined) creative.clientName = clientName.trim();
+    if (clientId !== undefined) creative.clientId = clientId;
     if (adName !== undefined) creative.adName = adName.trim();
+    if (purchases !== undefined) creative.purchases = Number(purchases);
 
-    // Recalculate score on the server when roas or purchases changes
-    const metricsChanged = roas !== undefined || purchases !== undefined;
-    const nextRoas = roas !== undefined ? Number(roas) : creative.roas;
-    const nextPurchases = purchases !== undefined ? Number(purchases) : creative.purchases;
-
-    if (metricsChanged) {
-      creative.roas = nextRoas;
-      creative.purchases = nextPurchases;
-      creative.score = calculateCreativeScore({ roas: nextRoas, purchases: nextPurchases });
+    // Resolve client baselineROAS reference
+    const targetClientId = clientId !== undefined ? clientId : creative.clientId;
+    let clientDoc = null;
+    if (targetClientId) {
+      clientDoc = await Client.findById(targetClientId);
     }
 
-    // Status change only updates status - never derives WINNER/AVERAGE/LOSER from score
+    const resolvedBaselineROAS = clientDoc
+      ? (clientDoc.baselineROAS ?? 0)
+      : baselineROAS !== undefined
+      ? Number(baselineROAS)
+      : previousROAS !== undefined
+      ? Number(previousROAS)
+      : (creative.baselineROAS ?? creative.previousROAS ?? 0);
+
+    creative.baselineROAS = resolvedBaselineROAS;
+    creative.previousROAS = resolvedBaselineROAS;
+
+    const nextRoas = roas !== undefined ? Number(roas) : creative.roas;
+    creative.roas = nextRoas;
+    creative.score = calculateCreativeScore({ roas: nextRoas, baselineROAS: resolvedBaselineROAS });
+
     if (status !== undefined) {
       creative.status = status;
     }
 
     await creative.save();
+
+    // Current ROAS must reflect the latest recorded creative performance for that client
+    if (clientDoc && nextRoas > 0) {
+      clientDoc.currentROAS = nextRoas;
+      await clientDoc.save().catch(() => {});
+    }
 
     res.status(200).json({
       success: true,
@@ -158,7 +215,7 @@ export const updateCreative = async (req, res, next) => {
 
 /**
  * 5. Delete creative entry
- * Admin ONLY (matching CRO permission model)
+ * Admin ONLY
  */
 export const deleteCreative = async (req, res, next) => {
   try {
@@ -227,7 +284,6 @@ export const getLeaderboard = async (req, res, next) => {
       }
     ]);
 
-    // Populate user profile info to get current display name & role
     const userIds = aggregation.map((item) => item._id);
     const users = await User.find({ _id: { $in: userIds } })
       .select('name email role teamRole')
@@ -243,7 +299,7 @@ export const getLeaderboard = async (req, res, next) => {
         name: user?.name || item.creatorName,
         creatives: item.creatives,
         winners: item.winners,
-        avgScore: Math.round((item.avgScore || 0) * 10) / 10,
+        avgScore: Math.round((item.avgScore || 0) * 100) / 100,
         totalPoints: Math.round((item.totalPoints || 0) * 100) / 100
       };
     });
@@ -294,7 +350,7 @@ export const getCreativeStats = async (req, res, next) => {
     );
     const userAvgScore =
       userCreatives > 0
-        ? Math.round((userTotalPoints / userCreatives) * 10) / 10
+        ? Math.round((userTotalPoints / userCreatives) * 100) / 100
         : 0;
 
     // User rank calculation

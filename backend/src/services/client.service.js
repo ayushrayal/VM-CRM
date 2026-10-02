@@ -6,8 +6,15 @@ import { CreativeStrategyTimeline } from '../models/CreativeStrategyTimeline.js'
 import { ApiError } from '../utils/ApiError.js';
 import { broadcastEvent } from './sse.service.js';
 
-export const getAllClients = async () => {
-  return await Client.find().sort({ name: 1 });
+export const getAllClients = async (filter = {}) => {
+  const query = {};
+  if (filter.status) {
+    query.status = filter.status;
+  } else {
+    // By default include all non-archived clients (both 'active' and legacy records where status is unset)
+    query.status = { $ne: 'archived' };
+  }
+  return await Client.find(query).sort({ name: 1 });
 };
 
 export const getClientById = async (clientId) => {
@@ -18,16 +25,41 @@ export const getClientById = async (clientId) => {
   return client;
 };
 
-export const createClient = async ({ name, code, description, userId }) => {
-  const existing = await Client.findOne({ name: { $regex: new RegExp(`^${name.trim()}$`, 'i') } });
-  if (existing) {
-    throw new ApiError(400, 'A client with this name already exists');
+export const createClient = async ({
+  name,
+  clientName,
+  code,
+  description,
+  baselineROAS = 0,
+  currentROAS,
+  status = 'active',
+  userId
+}) => {
+  const cleanName = (clientName || name || '').trim();
+  if (!cleanName) {
+    throw new ApiError(400, 'Client name is required');
   }
 
+  const normalized = cleanName.toLowerCase();
+  const existing = await Client.findOne({ normalizedName: normalized });
+  if (existing) {
+    throw new ApiError(400, `A client with the name '${cleanName}' already exists`);
+  }
+
+  const numBaseline = Number(baselineROAS) || 0;
+  const numCurrent = currentROAS !== undefined && currentROAS !== null
+    ? Number(currentROAS) || 0
+    : numBaseline;
+
   const client = await Client.create({
-    name: name.trim(),
-    code: code ? code.trim().toUpperCase() : name.trim().substring(0, 4).toUpperCase(),
+    name: cleanName,
+    clientName: cleanName,
+    normalizedName: normalized,
+    code: code ? code.trim().toUpperCase() : cleanName.substring(0, 4).toUpperCase(),
     description: description ? description.trim() : '',
+    baselineROAS: numBaseline,
+    currentROAS: numCurrent,
+    status: status || 'active',
     createdBy: userId
   });
 
@@ -41,15 +73,18 @@ export const updateClient = async (clientId, updateData) => {
     throw new ApiError(404, 'Client not found');
   }
 
-  if (updateData.name && updateData.name.trim() !== client.name) {
+  const nextName = (updateData.clientName || updateData.name || '').trim();
+  if (nextName && nextName.toLowerCase() !== client.normalizedName) {
     const existing = await Client.findOne({
-      name: { $regex: new RegExp(`^${updateData.name.trim()}$`, 'i') },
+      normalizedName: nextName.toLowerCase(),
       _id: { $ne: clientId }
     });
     if (existing) {
-      throw new ApiError(400, 'A client with this name already exists');
+      throw new ApiError(400, `A client with the name '${nextName}' already exists`);
     }
-    client.name = updateData.name.trim();
+    client.name = nextName;
+    client.clientName = nextName;
+    client.normalizedName = nextName.toLowerCase();
   }
 
   if (updateData.code !== undefined) {
@@ -57,6 +92,15 @@ export const updateClient = async (clientId, updateData) => {
   }
   if (updateData.description !== undefined) {
     client.description = updateData.description.trim();
+  }
+  if (updateData.baselineROAS !== undefined) {
+    client.baselineROAS = Number(updateData.baselineROAS) || 0;
+  }
+  if (updateData.currentROAS !== undefined) {
+    client.currentROAS = Number(updateData.currentROAS) || 0;
+  }
+  if (updateData.status !== undefined) {
+    client.status = updateData.status;
   }
 
   await client.save();
@@ -89,7 +133,7 @@ export const deleteClient = async (clientId) => {
     throw new ApiError(404, 'Client not found');
   }
 
-  // Find all records to clean up timelines
+  // Find all Creative Strategy records to clean up timelines
   const records = await CreativeStrategy.find({ client: clientId }).select('_id');
   const recordIds = records.map((r) => r._id);
 
@@ -100,6 +144,9 @@ export const deleteClient = async (clientId) => {
 
   await AdSet.deleteMany({ client: clientId });
   await Campaign.deleteMany({ client: clientId });
+  
+  // NOTE: Historical performance records (CreativePerformance and CROExperiment)
+  // are explicitly PRESERVED and not deleted!
   await Client.findByIdAndDelete(clientId);
 
   broadcastEvent('CLIENT_DELETED', { clientId });

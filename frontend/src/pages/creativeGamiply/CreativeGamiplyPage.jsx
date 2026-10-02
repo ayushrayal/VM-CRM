@@ -202,7 +202,7 @@ export const CreativeGamiplyPage = () => {
             <h1 className="page-title">Creative Performance</h1>
           </div>
           <p className="page-subtitle">
-            Internal creative performance gamification arena. Submit your ad performance, accumulate ROAS & purchase points, and compete on the leaderboard.
+            Internal creative performance gamification arena. Submit your ad performance, accumulate ROAS improvement points, and compete on the leaderboard.
           </p>
         </div>
 

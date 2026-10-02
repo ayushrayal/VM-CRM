@@ -21,10 +21,9 @@ export const CreativeDetailModal = ({
   };
 
   const roas = creative.roas ?? 0;
-  const purchases = creative.purchases ?? 0;
-  const roasPoints = creative.score?.roasPoints ?? 0;
-  const purchasePoints = creative.score?.purchasePoints ?? 0;
-  const totalPoints = creative.score?.totalPoints ?? 0;
+  const baselineROAS = creative.baselineROAS ?? creative.previousROAS ?? 0;
+  const isAboveBaseline = roas > baselineROAS;
+  const totalPoints = creative.score?.totalPoints ?? (isAboveBaseline ? 1 : 0);
 
   const formatDate = (dateStr) => {
     if (!dateStr) return '—';
@@ -88,14 +87,14 @@ export const CreativeDetailModal = ({
           <h4 className="section-title">Performance Metrics</h4>
           <div className="metrics-grid">
             <div className="metric-card">
-              <span className="metric-name">ROAS</span>
+              <span className="metric-name">Creative ROAS</span>
               <span className="metric-val">{roas}x</span>
-              <span className="metric-sub">Return on Ad Spend</span>
+              <span className="metric-sub">Recorded Performance</span>
             </div>
             <div className="metric-card">
-              <span className="metric-name">Purchases</span>
-              <span className="metric-val">{purchases.toLocaleString()}</span>
-              <span className="metric-sub">Confirmed Orders</span>
+              <span className="metric-name">Baseline ROAS</span>
+              <span className="metric-val">{baselineROAS}x</span>
+              <span className="metric-sub">Client Baseline Reference</span>
             </div>
           </div>
         </div>
@@ -106,20 +105,12 @@ export const CreativeDetailModal = ({
           <div className="score-breakdown-card">
             <div className="breakdown-row">
               <div className="breakdown-label-group">
-                <span className="breakdown-name">ROAS Points</span>
-                <span className="breakdown-math">{roas} × 10</span>
+                <span className="breakdown-name">Baseline Comparison</span>
+                <span className="breakdown-math">
+                  {roas}x {isAboveBaseline ? '>' : '≤'} {baselineROAS}x ({isAboveBaseline ? 'Above Baseline' : 'At or Below Baseline'})
+                </span>
               </div>
-              <span className="breakdown-points">+{roasPoints} pts</span>
-            </div>
-
-            <div className="breakdown-divider" />
-
-            <div className="breakdown-row">
-              <div className="breakdown-label-group">
-                <span className="breakdown-name">Purchase Points</span>
-                <span className="breakdown-math">{purchases} × 10</span>
-              </div>
-              <span className="breakdown-points">+{purchasePoints} pts</span>
+              <span className="breakdown-points">+{totalPoints} pt{totalPoints === 1 ? '' : 's'}</span>
             </div>
 
             <div className="breakdown-divider total-divider" />
@@ -127,9 +118,9 @@ export const CreativeDetailModal = ({
             <div className="breakdown-row total-row">
               <div className="breakdown-label-group">
                 <span className="breakdown-name total-name">Total Creative Score</span>
-                <span className="breakdown-math">Combined Leaderboard Points</span>
+                <span className="breakdown-math">Exceeding client Baseline ROAS earns exactly +1 point</span>
               </div>
-              <span className="breakdown-points total-points">+{totalPoints} pts</span>
+              <span className="breakdown-points total-points">+{totalPoints} pt{totalPoints === 1 ? '' : 's'}</span>
             </div>
           </div>
         </div>

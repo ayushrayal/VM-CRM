@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Modal } from '../common/Modal';
 import { Button } from '../common/Button';
 import { Input } from '../common/Input';
+import { ClientSelect } from '../common/ClientSelect';
 import { CREATIVE_STATUSES, CREATIVE_STATUS_CONFIG } from '../../constants/creative.constants';
 import './CreativeFormModal.scss';
 
@@ -15,10 +16,12 @@ export const CreativeFormModal = ({
   const isEdit = Boolean(initialData?._id);
 
   const [formData, setFormData] = useState({
+    clientId: null,
     clientName: '',
+    baselineROAS: 0,
+    previousROAS: 0,
     adName: '',
     roas: '',
-    purchases: '',
     status: CREATIVE_STATUSES.IDEA
   });
 
@@ -27,19 +30,24 @@ export const CreativeFormModal = ({
 
   useEffect(() => {
     if (initialData) {
+      const baseRoas = initialData.baselineROAS ?? initialData.previousROAS ?? initialData.clientId?.baselineROAS ?? 0;
       setFormData({
-        clientName: initialData.clientName || '',
+        clientId: initialData.clientId?._id || initialData.clientId || null,
+        clientName: initialData.clientName || initialData.clientId?.clientName || initialData.clientId?.name || '',
+        baselineROAS: baseRoas,
+        previousROAS: baseRoas,
         adName: initialData.adName || '',
         roas: initialData.roas !== undefined && initialData.roas !== null ? String(initialData.roas) : '',
-        purchases: initialData.purchases !== undefined && initialData.purchases !== null ? String(initialData.purchases) : '',
         status: initialData.status || CREATIVE_STATUSES.IDEA
       });
     } else {
       setFormData({
+        clientId: null,
         clientName: '',
+        baselineROAS: 0,
+        previousROAS: 0,
         adName: '',
         roas: '',
-        purchases: '',
         status: CREATIVE_STATUSES.IDEA
       });
     }
@@ -47,16 +55,27 @@ export const CreativeFormModal = ({
     setErrorMessage('');
   }, [initialData, isOpen]);
 
-  // Client-side score preview estimation
+  // Client-side score preview estimation based on Baseline ROAS
   const numRoas = parseFloat(formData.roas);
-  const numPurchases = parseInt(formData.purchases, 10);
-
   const safeRoas = !isNaN(numRoas) && numRoas >= 0 ? numRoas : 0;
-  const safePurchases = !isNaN(numPurchases) && numPurchases >= 0 ? numPurchases : 0;
+  const safeBaseline = Number(formData.baselineROAS ?? formData.previousROAS) || 0;
 
-  const previewRoasPoints = Math.round(safeRoas * 10 * 100) / 100;
-  const previewPurchasePoints = Math.round(safePurchases * 10);
-  const previewTotalPoints = Math.round((previewRoasPoints + previewPurchasePoints) * 100) / 100;
+  const isImproved = safeRoas > safeBaseline;
+  const previewTotalPoints = isImproved ? 1 : 0;
+
+  const handleClientChange = (selected) => {
+    const base = selected.baselineROAS ?? 0;
+    setFormData((prev) => ({
+      ...prev,
+      clientId: selected.clientId,
+      clientName: selected.clientName,
+      baselineROAS: base,
+      previousROAS: base
+    }));
+    if (formErrors.clientName) {
+      setFormErrors((prev) => ({ ...prev, clientName: '' }));
+    }
+  };
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -68,8 +87,8 @@ export const CreativeFormModal = ({
 
   const validate = () => {
     const errors = {};
-    if (!formData.clientName.trim()) {
-      errors.clientName = 'Client name is required';
+    if (!formData.clientName.trim() && !formData.clientId) {
+      errors.clientName = 'Please select a client';
     }
     if (!formData.adName.trim()) {
       errors.adName = 'Ad name is required';
@@ -78,12 +97,6 @@ export const CreativeFormModal = ({
       errors.roas = 'ROAS is required';
     } else if (isNaN(Number(formData.roas)) || Number(formData.roas) < 0) {
       errors.roas = 'ROAS must be a non-negative number';
-    }
-
-    if (formData.purchases === '' || formData.purchases === null || formData.purchases === undefined) {
-      errors.purchases = 'Purchases is required';
-    } else if (isNaN(Number(formData.purchases)) || Number(formData.purchases) < 0 || !Number.isInteger(Number(formData.purchases))) {
-      errors.purchases = 'Purchases must be a non-negative integer';
     }
 
     if (!formData.status || !Object.values(CREATIVE_STATUSES).includes(formData.status)) {
@@ -101,11 +114,14 @@ export const CreativeFormModal = ({
     if (!validate()) return;
 
     try {
+      const base = Number(formData.baselineROAS ?? formData.previousROAS) || 0;
       await onSubmit({
+        clientId: formData.clientId || undefined,
         clientName: formData.clientName.trim(),
         adName: formData.adName.trim(),
         roas: Number(formData.roas),
-        purchases: Number(formData.purchases),
+        baselineROAS: base,
+        previousROAS: base,
         status: formData.status
       });
       onClose();
@@ -132,29 +148,31 @@ export const CreativeFormModal = ({
         )}
 
         <div className="form-grid">
-          {/* Client Name */}
-          <Input
-            id="clientName"
-            name="clientName"
-            label="Client Name"
-            placeholder="e.g. Acme Corp"
-            value={formData.clientName}
-            onChange={handleChange}
-            error={formErrors.clientName}
-            required
-          />
+          {/* Shared Searchable Client Dropdown */}
+          <div className="full-width">
+            <ClientSelect
+              value={formData.clientId || formData.clientName}
+              onChange={handleClientChange}
+              error={formErrors.clientName}
+              label="Client"
+              required
+              placeholder="Search and select client from central directory..."
+            />
+          </div>
 
           {/* Ad Name */}
-          <Input
-            id="adName"
-            name="adName"
-            label="Ad Name"
-            placeholder="e.g. Summer Sale - Reel V3"
-            value={formData.adName}
-            onChange={handleChange}
-            error={formErrors.adName}
-            required
-          />
+          <div className="full-width">
+            <Input
+              id="adName"
+              name="adName"
+              label="Ad Name"
+              placeholder="e.g. Summer Sale - Reel V3"
+              value={formData.adName}
+              onChange={handleChange}
+              error={formErrors.adName}
+              required
+            />
+          </div>
 
           {/* ROAS */}
           <Input
@@ -163,28 +181,12 @@ export const CreativeFormModal = ({
             type="number"
             step="0.01"
             min="0"
-            label="ROAS (Return on Ad Spend)"
-            placeholder="e.g. 4.25"
+            label="Creative ROAS"
+            placeholder="e.g. 5.0"
             value={formData.roas}
             onChange={handleChange}
             error={formErrors.roas}
-            helperText="Points formula: ROAS × 10"
-            required
-          />
-
-          {/* Purchases */}
-          <Input
-            id="purchases"
-            name="purchases"
-            type="number"
-            step="1"
-            min="0"
-            label="Purchases (Conversions)"
-            placeholder="e.g. 50"
-            value={formData.purchases}
-            onChange={handleChange}
-            error={formErrors.purchases}
-            helperText="Points formula: Purchases × 10"
+            helperText={`Client Baseline ROAS: ${safeBaseline}x`}
             required
           />
 
@@ -208,7 +210,7 @@ export const CreativeFormModal = ({
             </select>
             {formErrors.status && <span className="input-error-message">{formErrors.status}</span>}
             <span className="input-helper-text">
-              Winner is manually selected. Score does not automatically alter status.
+              Winner is manually selected. Status does not change automatically based on the score.
             </span>
           </div>
         </div>
@@ -216,36 +218,38 @@ export const CreativeFormModal = ({
         {/* Live Score Preview Box */}
         <div className="score-preview-box">
           <div className="preview-header">
-            <span className="preview-title">Estimated Score Preview</span>
+            <span className="preview-title">Baseline ROAS Scoring</span>
             <span className="preview-badge">Server Authoritative</span>
           </div>
 
           <div className="score-breakdown-row">
             <div className="score-item">
-              <span className="score-label">ROAS Points</span>
-              <span className="score-calc">{safeRoas} × 10</span>
-              <span className="score-val">+{previewRoasPoints} pts</span>
+              <span className="score-label">Creative ROAS</span>
+              <span className="score-calc">{safeRoas > 0 ? `${safeRoas}x` : '—'}</span>
+              <span className="score-val">Recorded</span>
             </div>
 
-            <div className="plus-sign">+</div>
+            <div className="minus-sign">vs</div>
 
             <div className="score-item">
-              <span className="score-label">Purchase Points</span>
-              <span className="score-calc">{safePurchases} × 10</span>
-              <span className="score-val">+{previewPurchasePoints} pts</span>
+              <span className="score-label">Baseline ROAS</span>
+              <span className="score-calc">{safeBaseline}x</span>
+              <span className="score-val">Baseline</span>
             </div>
 
             <div className="equals-sign">=</div>
 
             <div className="score-item total-item">
-              <span className="score-label">Total Score</span>
-              <span className="score-calc">Combined</span>
-              <span className="score-val total-val">+{previewTotalPoints} pts</span>
+              <span className="score-label">Score</span>
+              <span className="score-calc">
+                {isImproved ? `ROAS > Baseline (+1)` : 'No improvement (0)'}
+              </span>
+              <span className="score-val total-val">+{previewTotalPoints} pt{previewTotalPoints === 1 ? '' : 's'}</span>
             </div>
           </div>
 
           <p className="preview-disclaimer">
-            Final scoring is computed and verified by the server upon submission.
+            Points are awarded strictly for exceeding the client Baseline ROAS (ROAS &gt; Baseline earns exactly +1 point). Status does not affect score.
           </p>
         </div>
 

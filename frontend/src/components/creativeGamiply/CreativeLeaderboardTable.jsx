@@ -29,7 +29,7 @@ export const CreativeLeaderboardTable = ({
         <div>
           <h3 className="leaderboard-title">Creative Performance Leaderboard</h3>
           <p className="leaderboard-subtitle">
-            Ranked by accumulated creative score from ROAS and purchases
+            Ranked by Baseline ROAS improvements (+1 point when ROAS exceeds baseline)
           </p>
         </div>
 

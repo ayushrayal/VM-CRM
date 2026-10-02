@@ -283,8 +283,7 @@ export const ExperimentDetailModal = ({
                       <th className="col-metric">Metric</th>
                       <th className="col-before">Before</th>
                       <th className="col-after">After</th>
-                      <th className="col-improvement">Improvement</th>
-                      <th className="col-points">Points Awarded</th>
+                      <th className="col-improvement">Uplift</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -310,9 +309,6 @@ export const ExperimentDetailModal = ({
                           '—'
                         )}
                       </td>
-                      <td className="points-cell">
-                        {score.salesPoints > 0 ? `+${score.salesPoints}` : '0'} pts
-                      </td>
                     </tr>
 
                     {/* 2. Prepaid */}
@@ -337,37 +333,6 @@ export const ExperimentDetailModal = ({
                           '—'
                         )}
                       </td>
-                      <td className="points-cell">
-                        {score.prepaidPoints > 0 ? `+${score.prepaidPoints}` : '0'} pts
-                      </td>
-                    </tr>
-
-                    {/* 3. Cancellation */}
-                    <tr>
-                      <td className="metric-name">
-                        <span className="metric-icon">📉</span> Cancellation Rate
-                      </td>
-                      <td className="num-val">{formatPercent(results.cancellationBefore)}</td>
-                      <td className="num-val">{formatPercent(results.cancellationAfter)}</td>
-                      <td>
-                        {results.cancellationBefore != null &&
-                        results.cancellationAfter != null ? (
-                          <span
-                            className={`improvement-pill ${
-                              score.cancellationPoints > 0 ? 'positive' : ''
-                            }`}
-                          >
-                            {improvements.cancellationPercentagePoints > 0
-                              ? `+${improvements.cancellationPercentagePoints} pp`
-                              : `${improvements.cancellationPercentagePoints} pp`}
-                          </span>
-                        ) : (
-                          '—'
-                        )}
-                      </td>
-                      <td className="points-cell">
-                        {score.cancellationPoints > 0 ? `+${score.cancellationPoints}` : '0'} pts
-                      </td>
                     </tr>
                   </tbody>
                 </table>
@@ -378,14 +343,13 @@ export const ExperimentDetailModal = ({
             <div className="total-score-card">
               <div className="score-content">
                 <span className="score-subtitle">TOTAL POINTS AWARDED</span>
-                <span className="score-headline">+{score.totalPoints || 0} Points</span>
+                <span className="score-headline">+{score.totalPoints || 0} Point{score.totalPoints === 1 ? '' : 's'}</span>
+                <span style={{ fontSize: '0.8rem', color: '#6B7280', marginTop: '0.25rem' }}>
+                  {score.salesImprovementPoints > 0 ? '+1 Product Sales' : '0 Product Sales'} &bull; {score.prepaidImprovementPoints > 0 ? '+1 Prepaid Orders' : '0 Prepaid Orders'} (Max 2 pts)
+                </span>
               </div>
               <div className="score-badge-status">
-                {score.totalPoints >= 500 ? (
-                  <span className="performer-pill">🌟 500+ Top Performer</span>
-                ) : (
-                  <span className="standard-pill">CRO Verified</span>
-                )}
+                <span className="standard-pill">{statusConfig.label}</span>
               </div>
             </div>
 

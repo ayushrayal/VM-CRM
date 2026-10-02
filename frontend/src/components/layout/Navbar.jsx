@@ -51,6 +51,13 @@ export const Navbar = () => {
             </NavLink>
 
             <NavLink
+              to="/clients"
+              className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}
+            >
+              Clients
+            </NavLink>
+
+            <NavLink
               to="/creative-strategy"
               className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}
             >

@@ -214,7 +214,12 @@ export const CreativeStrategyPage = () => {
   const loadClients = async () => {
     try {
       const data = await getClients();
-      setClients(data || []);
+      const list = Array.isArray(data)
+        ? data
+        : Array.isArray(data?.data)
+          ? data.data
+          : (data?.data?.data || []);
+      setClients(list);
     } catch (err) {
       console.error('Failed to load clients', err);
     }

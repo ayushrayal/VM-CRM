@@ -14,6 +14,11 @@ const creativePerformanceSchema = new mongoose.Schema(
       required: [true, 'Creator name snapshot is required'],
       trim: true
     },
+    clientId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Client',
+      index: true
+    },
     clientName: {
       type: String,
       required: [true, 'Client name is required'],
@@ -25,6 +30,16 @@ const creativePerformanceSchema = new mongoose.Schema(
       required: [true, 'Ad name is required'],
       trim: true
     },
+    baselineROAS: {
+      type: Number,
+      default: 0,
+      min: [0, 'Baseline ROAS cannot be negative']
+    },
+    previousROAS: {
+      type: Number,
+      default: 0,
+      min: [0, 'Previous ROAS cannot be negative']
+    },
     roas: {
       type: Number,
       required: [true, 'ROAS is required'],
@@ -32,7 +47,7 @@ const creativePerformanceSchema = new mongoose.Schema(
     },
     purchases: {
       type: Number,
-      required: [true, 'Purchases is required'],
+      default: 0,
       min: [0, 'Purchases cannot be negative']
     },
     status: {
@@ -64,6 +79,7 @@ const creativePerformanceSchema = new mongoose.Schema(
 
 // Compound indexes for listing, filtering, and leaderboard aggregations
 creativePerformanceSchema.index({ creatorId: 1, createdAt: -1 });
+creativePerformanceSchema.index({ clientId: 1, createdAt: -1 });
 creativePerformanceSchema.index({ status: 1, createdAt: -1 });
 creativePerformanceSchema.index({ createdAt: -1, 'score.totalPoints': -1 });
 

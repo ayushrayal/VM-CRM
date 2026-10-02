@@ -9,3 +9,5 @@ test-creative-strategy.js
 test-cro.js
 test-production-serving.js
 test-creative-gamiply.js
+test-clients-and-new-scoring.js
+test-client-bug-flow.js

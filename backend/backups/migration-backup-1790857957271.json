@@ -1,0 +1,44 @@
+{
+  "timestamp": "2026-10-01T12:32:37.270Z",
+  "clientsCount": 3,
+  "creativesCount": 0,
+  "croCount": 0,
+  "clients": [
+    {
+      "_id": "6abb958cee959c542012cc33",
+      "name": "The Pain Company",
+      "code": "TPC",
+      "description": "",
+      "createdBy": "6ab65d8e467c36e7e5a5217a",
+      "createdAt": "2026-09-29T10:40:12.517Z",
+      "updatedAt": "2026-09-29T10:40:12.517Z",
+      "__v": 0
+    },
+    {
+      "_id": "6abb97b8ee959c542012cc3a",
+      "name": "JSB Wellness",
+      "code": "JSB",
+      "description": "",
+      "createdBy": "6ab65d8e467c36e7e5a5217a",
+      "createdAt": "2026-09-29T10:49:28.592Z",
+      "updatedAt": "2026-09-29T10:49:28.592Z",
+      "__v": 0
+    },
+    {
+      "_id": "6abe51ed9e0387548ad7fddf",
+      "name": "Jsb",
+      "clientName": "Jsb",
+      "normalizedName": "jsb",
+      "baselineROAS": 4,
+      "currentROAS": 4,
+      "code": "1",
+      "description": "",
+      "createdBy": "6ab65d8e467c36e7e5a5217a",
+      "createdAt": "2026-10-01T12:28:29.039Z",
+      "updatedAt": "2026-10-01T12:28:29.039Z",
+      "__v": 0
+    }
+  ],
+  "creatives": [],
+  "croExperiments": []
+}

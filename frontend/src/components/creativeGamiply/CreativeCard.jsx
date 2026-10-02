@@ -28,7 +28,7 @@ export const CreativeCard = ({
 
   const totalPoints = creative.score?.totalPoints ?? 0;
   const roas = creative.roas ?? 0;
-  const purchases = creative.purchases ?? 0;
+  const baselineROAS = creative.baselineROAS ?? creative.previousROAS ?? 0;
 
   return (
     <div className="creative-card">
@@ -57,20 +57,20 @@ export const CreativeCard = ({
         {creative.adName}
       </h3>
 
-      {/* Performance Metrics: ROAS, Purchases, Points */}
+      {/* Performance Metrics: ROAS, Baseline ROAS, Points */}
       <div className="card-metrics-grid">
         <div className="metric-box">
-          <span className="metric-label">ROAS</span>
+          <span className="metric-label">Creative ROAS</span>
           <span className="metric-value">{roas}x</span>
         </div>
         <div className="metric-box">
-          <span className="metric-label">Purchases</span>
-          <span className="metric-value">{purchases.toLocaleString()}</span>
+          <span className="metric-label">Baseline ROAS</span>
+          <span className="metric-value">{baselineROAS}x</span>
         </div>
         <div className={`points-pill ${totalPoints > 0 ? 'positive' : 'zero'}`}>
           <span className="points-label">Total Score</span>
           <span className="points-text">
-            {totalPoints > 0 ? `+${totalPoints} pts` : '0 pts'}
+            {totalPoints > 0 ? `+${totalPoints} pt${totalPoints === 1 ? '' : 's'}` : '0 pts'}
           </span>
         </div>
       </div>

@@ -1,0 +1,225 @@
+@use 'sass:color';
+@use '../../styles/variables' as *;
+
+.client-select-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  position: relative;
+  width: 100%;
+
+  .client-select-label {
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: $color-text-primary;
+
+    .required-asterisk {
+      color: $color-warm-orange;
+      margin-left: 2px;
+    }
+  }
+
+  .client-select-box {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    min-height: 42px;
+    padding: 6px 12px;
+    background: $color-card-bg;
+    border: 1px solid $color-border;
+    border-radius: $radius-md;
+    cursor: pointer;
+    user-select: none;
+    transition: border-color $transition-fast, box-shadow $transition-fast;
+
+    &:hover {
+      border-color: color.adjust($color-border, $lightness: -15%);
+    }
+
+    &:focus-visible,
+    &.is-open {
+      outline: none;
+      border-color: $color-olive-charcoal;
+      box-shadow: 0 0 0 2px rgba(57, 58, 49, 0.12);
+    }
+
+    &.is-disabled {
+      background: #F3F4F6;
+      cursor: not-allowed;
+      opacity: 0.7;
+    }
+
+    .client-placeholder {
+      font-size: 0.88rem;
+      color: $color-text-muted;
+    }
+
+    .select-arrow {
+      font-size: 0.75rem;
+      color: $color-text-muted;
+      margin-left: 8px;
+    }
+  }
+
+  .client-selected-display {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    flex: 1;
+
+    .client-badge-icon {
+      font-size: 0.95rem;
+    }
+
+    .client-name-text {
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: $color-text-primary;
+    }
+
+    .roas-pill {
+      font-size: 0.75rem;
+      font-weight: 500;
+      background: $color-soft-ivory;
+      color: $color-olive-charcoal;
+      padding: 2px 8px;
+      border-radius: $radius-full;
+      border: 1px solid color.adjust($color-soft-ivory, $lightness: -10%);
+    }
+
+    .client-clear-btn {
+      background: none;
+      border: none;
+      color: $color-text-muted;
+      font-size: 1.1rem;
+      line-height: 1;
+      cursor: pointer;
+      padding: 0 4px;
+      margin-left: auto;
+
+      &:hover {
+        color: $color-danger-text;
+      }
+    }
+  }
+
+  .client-dropdown-menu {
+    position: absolute;
+    top: calc(100% + 4px);
+    left: 0;
+    right: 0;
+    z-index: 1000;
+    background: #FFFFFF;
+    border: 1px solid $color-border;
+    border-radius: $radius-md;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.12);
+    overflow: hidden;
+    animation: fadeInMenu 0.15s ease-out;
+
+    .dropdown-search-wrapper {
+      padding: 8px;
+      border-bottom: 1px solid $color-border;
+      background: #FAFAFA;
+
+      .dropdown-search-input {
+        width: 100%;
+        padding: 8px 12px;
+        font-size: 0.85rem;
+        border: 1px solid $color-border;
+        border-radius: $radius-sm;
+        outline: none;
+
+        &:focus {
+          border-color: $color-olive-charcoal;
+        }
+      }
+    }
+
+    .dropdown-options-list {
+      max-height: 220px;
+      overflow-y: auto;
+
+      .dropdown-loading,
+      .dropdown-empty {
+        padding: 16px;
+        text-align: center;
+        font-size: 0.85rem;
+        color: $color-text-muted;
+      }
+
+      .dropdown-option {
+        padding: 10px 14px;
+        cursor: pointer;
+        display: flex;
+        flex-direction: column;
+        gap: 3px;
+        border-bottom: 1px solid rgba(0, 0, 0, 0.03);
+        transition: background $transition-fast;
+
+        &:last-child {
+          border-bottom: none;
+        }
+
+        &:hover {
+          background: #F8F8F4;
+        }
+
+        &.selected {
+          background: #F2F2E6;
+        }
+
+        .option-name-row {
+          display: flex;
+          align-items: center;
+          gap: 6px;
+
+          .option-name {
+            font-size: 0.88rem;
+            font-weight: 600;
+            color: $color-text-primary;
+          }
+
+          .option-code {
+            font-size: 0.75rem;
+            color: $color-text-secondary;
+          }
+        }
+
+        .option-meta-row {
+          display: flex;
+          gap: 10px;
+          font-size: 0.78rem;
+          color: $color-text-secondary;
+
+          strong {
+            color: $color-text-primary;
+          }
+        }
+      }
+    }
+  }
+
+  .client-select-error {
+    font-size: 0.75rem;
+    color: $color-danger-text;
+  }
+
+  &.has-error {
+    .client-select-box {
+      border-color: $color-danger-border;
+      background: $color-danger-bg;
+    }
+  }
+}
+
+@keyframes fadeInMenu {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}

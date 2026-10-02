@@ -8,6 +8,7 @@ import { UserManagement } from '../pages/admin/UserManagement';
 import { CreativeStrategyPage } from '../pages/creativeStrategy/CreativeStrategyPage';
 import { CROGamiplyPage } from '../pages/croGamiply/CROGamiplyPage';
 import { CreativeGamiplyPage } from '../pages/creativeGamiply/CreativeGamiplyPage';
+import { ClientsPage } from '../pages/clients/ClientsPage';
 import { AppLayout } from '../components/layout/AppLayout';
 import { ProtectedRoute } from './ProtectedRoute';
 import { RoleRoute } from './RoleRoute';
@@ -24,6 +25,7 @@ export const AppRoutes = () => {
       <Route element={<ProtectedRoute />}>
         <Route element={<AppLayout />}>
           <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/clients" element={<ClientsPage />} />
           <Route path="/creative-strategy" element={<CreativeStrategyPage />} />
           <Route path="/gamiply/cro" element={<CROGamiplyPage />} />
           <Route path="/cro-gamiply" element={<Navigate to="/gamiply/cro" replace />} />

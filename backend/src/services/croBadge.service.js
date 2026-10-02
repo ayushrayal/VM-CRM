@@ -1,7 +1,7 @@
 import { CRO_BADGE_TYPES, CRO_EXPERIMENT_STATUS } from '../constants/cro.constants.js';
 
 /**
- * Calculates badges for a user based on their aggregated experiment statistics.
+ * Calculates badges for a user based on their simplified experiment statistics.
  *
  * @param {Object} stats
  * @param {number} stats.totalExperiments
@@ -20,11 +20,11 @@ export const evaluateUserBadges = ({
     badges.push(CRO_BADGE_TYPES.FIRST_EXPERIMENT);
   }
 
-  if (successfulExperiments >= 1) {
+  if (successfulExperiments >= 1 || totalPoints >= 1) {
     badges.push(CRO_BADGE_TYPES.FIRST_SUCCESS);
   }
 
-  if (totalPoints >= 100 || totalExperiments >= 3) {
+  if (totalPoints >= 2 || totalExperiments >= 3) {
     badges.push(CRO_BADGE_TYPES.CRO_STARTER);
   }
 
@@ -32,11 +32,11 @@ export const evaluateUserBadges = ({
     badges.push(CRO_BADGE_TYPES.CRO_EXPLORER);
   }
 
-  if (totalPoints >= 500 || successfulExperiments >= 3) {
+  if (totalPoints >= 3 || successfulExperiments >= 3) {
     badges.push(CRO_BADGE_TYPES.CRO_PERFORMER);
   }
 
-  if (totalPoints >= 1000) {
+  if (totalPoints >= 5 || successfulExperiments >= 5) {
     badges.push(CRO_BADGE_TYPES.CRO_CHAMPION);
   }
 
@@ -44,7 +44,7 @@ export const evaluateUserBadges = ({
 };
 
 /**
- * Evaluates experiment-specific badges (e.g. for display on an individual experiment).
+ * Evaluates experiment-specific badges for a single experiment.
  *
  * @param {Object} experiment
  * @returns {string[]} Array of badge IDs relevant to this single experiment
@@ -56,14 +56,8 @@ export const evaluateExperimentBadges = (experiment) => {
   const totalPoints = experiment.score?.totalPoints || 0;
   const status = experiment.status;
 
-  if (status === CRO_EXPERIMENT_STATUS.SUCCESSFUL || totalPoints > 0) {
+  if (status === CRO_EXPERIMENT_STATUS.SUCCESSFUL || totalPoints >= 1) {
     badges.push(CRO_BADGE_TYPES.FIRST_SUCCESS);
-  }
-  if (totalPoints >= 300) {
-    badges.push(CRO_BADGE_TYPES.CRO_PERFORMER);
-  }
-  if (totalPoints >= 600) {
-    badges.push(CRO_BADGE_TYPES.CRO_CHAMPION);
   }
 
   return badges;

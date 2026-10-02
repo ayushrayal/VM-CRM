@@ -3,6 +3,7 @@ import fs from 'fs';
 import { fileURLToPath } from 'url';
 import crypto from 'crypto';
 import { CROExperiment } from '../models/CROExperiment.js';
+import { Client } from '../models/Client.js';
 import { User } from '../models/User.js';
 import { CROUpload } from '../models/CROUpload.js';
 import { calculateCroScore } from '../services/croScoring.service.js';
@@ -31,6 +32,7 @@ if (!fs.existsSync(uploadDir)) {
 export const createExperiment = async (req, res, next) => {
   try {
     const {
+      clientId,
       clientName,
       hypothesisTitle,
       hypothesis,
@@ -42,8 +44,24 @@ export const createExperiment = async (req, res, next) => {
       results = {}
     } = req.body;
 
-    // Calculate score server-side only
-    const scoreResult = calculateCroScore(results);
+    let resolvedClientId = clientId;
+    let resolvedClientName = clientName ? clientName.trim() : '';
+
+    if (resolvedClientId) {
+      const clientDoc = await Client.findById(resolvedClientId);
+      if (clientDoc) {
+        resolvedClientName = clientDoc.clientName || clientDoc.name;
+      }
+    } else if (resolvedClientName) {
+      const clientDoc = await Client.findOne({ normalizedName: resolvedClientName.toLowerCase() });
+      if (clientDoc) {
+        resolvedClientId = clientDoc._id;
+        resolvedClientName = clientDoc.clientName || clientDoc.name;
+      }
+    }
+
+    // Calculate score server-side only: simplified 1 point for SUCCESSFUL
+    const scoreResult = calculateCroScore(results, status);
 
     // If marked completed or successful, record completedAt
     const isCompleted = [
@@ -58,7 +76,8 @@ export const createExperiment = async (req, res, next) => {
     const experimentData = {
       creatorId: req.user._id,
       creatorName: req.user.name,
-      clientName,
+      clientId: resolvedClientId || null,
+      clientName: resolvedClientName,
       hypothesisTitle,
       hypothesis,
       startDate,
@@ -109,7 +128,7 @@ export const createExperiment = async (req, res, next) => {
  */
 export const getExperiments = async (req, res, next) => {
   try {
-    const { status, creatorId, mine, clientName, search } = req.query;
+    const { status, creatorId, mine, clientId, clientName, search } = req.query;
     const filter = {};
 
     if (status && Object.values(CRO_EXPERIMENT_STATUS).includes(status)) {
@@ -120,6 +139,10 @@ export const getExperiments = async (req, res, next) => {
       filter.creatorId = req.user._id;
     } else if (creatorId) {
       filter.creatorId = creatorId;
+    }
+
+    if (clientId) {
+      filter.clientId = clientId;
     }
 
     if (clientName) {
@@ -138,7 +161,8 @@ export const getExperiments = async (req, res, next) => {
 
     const experiments = await CROExperiment.find(filter)
       .sort({ createdAt: -1 })
-      .populate('creatorId', 'name email role teamRole');
+      .populate('creatorId', 'name email role teamRole')
+      .populate('clientId', 'name clientName baselineROAS currentROAS');
 
     res.status(200).json({
       success: true,
@@ -194,6 +218,7 @@ export const updateExperiment = async (req, res, next) => {
     }
 
     const {
+      clientId,
       clientName,
       hypothesisTitle,
       hypothesis,
@@ -205,7 +230,16 @@ export const updateExperiment = async (req, res, next) => {
       results
     } = req.body;
 
-    if (clientName !== undefined) experiment.clientName = clientName;
+    if (clientId !== undefined) {
+      experiment.clientId = clientId;
+      const clientDoc = await Client.findById(clientId);
+      if (clientDoc) {
+        experiment.clientName = clientDoc.clientName || clientDoc.name;
+      }
+    } else if (clientName !== undefined) {
+      experiment.clientName = clientName.trim();
+    }
+
     if (hypothesisTitle !== undefined) experiment.hypothesisTitle = hypothesisTitle;
     if (hypothesis !== undefined) experiment.hypothesis = hypothesis;
     if (startDate !== undefined) experiment.startDate = startDate;
@@ -213,33 +247,8 @@ export const updateExperiment = async (req, res, next) => {
     if (beforeImages !== undefined) experiment.beforeImages = beforeImages;
     if (afterImages !== undefined) experiment.afterImages = afterImages;
 
-    // Handle Results & Automatic Score Recalculation
-    if (results !== undefined) {
-      const mergedResults = {
-        salesBefore: results.salesBefore !== undefined ? results.salesBefore : experiment.results?.salesBefore,
-        salesAfter: results.salesAfter !== undefined ? results.salesAfter : experiment.results?.salesAfter,
-        prepaidBefore: results.prepaidBefore !== undefined ? results.prepaidBefore : experiment.results?.prepaidBefore,
-        prepaidAfter: results.prepaidAfter !== undefined ? results.prepaidAfter : experiment.results?.prepaidAfter,
-        cancellationBefore:
-          results.cancellationBefore !== undefined
-            ? results.cancellationBefore
-            : experiment.results?.cancellationBefore,
-        cancellationAfter:
-          results.cancellationAfter !== undefined ? results.cancellationAfter : experiment.results?.cancellationAfter
-      };
-
-      const scoreResult = calculateCroScore(mergedResults);
-      experiment.results = mergedResults;
-      experiment.score = {
-        salesPoints: scoreResult.salesPoints,
-        prepaidPoints: scoreResult.prepaidPoints,
-        cancellationPoints: scoreResult.cancellationPoints,
-        totalPoints: scoreResult.totalPoints
-      };
-      experiment.improvements = scoreResult.improvements;
-    }
-
     // Handle Status and completedAt
+    const nextStatus = status !== undefined ? status : experiment.status;
     if (status !== undefined) {
       experiment.status = status;
       const isCompleted = [
@@ -254,6 +263,32 @@ export const updateExperiment = async (req, res, next) => {
       } else if (!isCompleted) {
         experiment.completedAt = null;
       }
+    }
+
+    // Handle Results & Score Recalculation (1 pt if SUCCESSFUL, 0 otherwise)
+    if (results !== undefined || status !== undefined) {
+      const mergedResults = results !== undefined ? {
+        salesBefore: results.salesBefore !== undefined ? results.salesBefore : experiment.results?.salesBefore,
+        salesAfter: results.salesAfter !== undefined ? results.salesAfter : experiment.results?.salesAfter,
+        prepaidBefore: results.prepaidBefore !== undefined ? results.prepaidBefore : experiment.results?.prepaidBefore,
+        prepaidAfter: results.prepaidAfter !== undefined ? results.prepaidAfter : experiment.results?.prepaidAfter,
+        cancellationBefore:
+          results.cancellationBefore !== undefined
+            ? results.cancellationBefore
+            : experiment.results?.cancellationBefore,
+        cancellationAfter:
+          results.cancellationAfter !== undefined ? results.cancellationAfter : experiment.results?.cancellationAfter
+      } : experiment.results;
+
+      const scoreResult = calculateCroScore(mergedResults, nextStatus);
+      experiment.results = mergedResults;
+      experiment.score = {
+        salesPoints: scoreResult.salesPoints,
+        prepaidPoints: scoreResult.prepaidPoints,
+        cancellationPoints: scoreResult.cancellationPoints,
+        totalPoints: scoreResult.totalPoints
+      };
+      experiment.improvements = scoreResult.improvements;
     }
 
     // Re-evaluate badges

@@ -29,7 +29,7 @@ export const LeaderboardTable = ({
         <div>
           <h3 className="leaderboard-title">CRO Experimentation Leaderboard</h3>
           <p className="leaderboard-subtitle">
-            Ranked by accumulated improvement points across documented CRO tests
+            Ranked by metric improvements (+1 pt Product Sales, +1 pt Prepaid Orders % &bull; Max 2 pts)
           </p>
         </div>
 

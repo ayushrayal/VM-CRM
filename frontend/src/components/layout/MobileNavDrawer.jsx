@@ -37,6 +37,14 @@ export const MobileNavDrawer = ({ isOpen, onClose, user, isAdmin, onSignout }) =
           </NavLink>
 
           <NavLink
+            to="/clients"
+            className={({ isActive }) => `drawer-link ${isActive ? 'active' : ''}`}
+            onClick={onClose}
+          >
+            Clients
+          </NavLink>
+
+          <NavLink
             to="/creative-strategy"
             className={({ isActive }) => `drawer-link ${isActive ? 'active' : ''}`}
             onClick={onClose}

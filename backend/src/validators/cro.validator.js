@@ -36,19 +36,15 @@ const createResultsSchema = z.object({
   salesBefore: nullableNumber(undefined, 0, 'Sales before').default(null),
   salesAfter: nullableNumber(undefined, 0, 'Sales after').default(null),
   prepaidBefore: nullableNumber(100, 0, 'Prepaid %').default(null),
-  prepaidAfter: nullableNumber(100, 0, 'Prepaid %').default(null),
-  cancellationBefore: nullableNumber(100, 0, 'Cancellation %').default(null),
-  cancellationAfter: nullableNumber(100, 0, 'Cancellation %').default(null)
-});
+  prepaidAfter: nullableNumber(100, 0, 'Prepaid %').default(null)
+}).passthrough();
 
 const updateResultsSchema = z.object({
   salesBefore: nullableNumber(undefined, 0, 'Sales before'),
   salesAfter: nullableNumber(undefined, 0, 'Sales after'),
   prepaidBefore: nullableNumber(100, 0, 'Prepaid %'),
-  prepaidAfter: nullableNumber(100, 0, 'Prepaid %'),
-  cancellationBefore: nullableNumber(100, 0, 'Cancellation %'),
-  cancellationAfter: nullableNumber(100, 0, 'Cancellation %')
-});
+  prepaidAfter: nullableNumber(100, 0, 'Prepaid %')
+}).passthrough();
 
 const improvementsSchema = z
   .object({
@@ -72,7 +68,8 @@ const scoreSchema = z
 export const createCroExperimentSchema = z.object({
   body: z
     .object({
-      clientName: z.string().trim().min(1, 'Client name is required').max(150),
+      clientId: z.string().regex(/^[0-9a-fA-F]{24}$/, 'Invalid client ID').optional(),
+      clientName: z.string().trim().max(150).optional(),
       hypothesisTitle: z.string().trim().min(1, 'Hypothesis title is required').max(200),
       hypothesis: z.string().trim().min(1, 'Hypothesis description is required'),
       startDate: startDateSchema,
@@ -83,6 +80,10 @@ export const createCroExperimentSchema = z.object({
       results: createResultsSchema.optional().default({}),
       improvements: improvementsSchema,
       score: scoreSchema
+    })
+    .refine((data) => Boolean(data.clientId || data.clientName), {
+      message: 'Client is required',
+      path: ['clientName']
     })
     .refine(
       (data) => {
@@ -104,6 +105,7 @@ export const updateCroExperimentSchema = z.object({
   }),
   body: z
     .object({
+      clientId: z.string().regex(/^[0-9a-fA-F]{24}$/, 'Invalid client ID').optional(),
       clientName: z.string().trim().min(1).max(150).optional(),
       hypothesisTitle: z.string().trim().min(1).max(200).optional(),
       hypothesis: z.string().trim().min(1).optional(),
@@ -152,6 +154,7 @@ export const listCroExperimentsQuerySchema = z.object({
     status: z.string().optional(),
     creatorId: z.string().optional(),
     mine: z.string().optional(),
+    clientId: z.string().optional(),
     clientName: z.string().optional(),
     search: z.string().optional()
   })
