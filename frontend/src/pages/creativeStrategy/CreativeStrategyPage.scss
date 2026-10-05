@@ -199,12 +199,15 @@
   background: #FFFFFF;
   border: 1px solid #E5E5DC;
   border-radius: 12px;
-  overflow: hidden;
+  overflow-x: auto;
+  overflow-y: hidden;
   box-shadow: 0 2px 12px rgba(0, 0, 0, 0.03);
+  max-width: 100%;
 }
 
 .workflow-table {
   width: 100%;
+  min-width: 1420px;
   border-collapse: collapse;
   text-align: left;
   font-size: 0.85rem;
@@ -221,6 +224,19 @@
       color: #5A5B52;
       letter-spacing: 0.04em;
       white-space: nowrap;
+
+      &.th-client { min-width: 110px; }
+      &.th-campaign { min-width: 140px; }
+      &.th-adset { min-width: 120px; }
+      &.th-creative { min-width: 150px; }
+      &.th-cycle { min-width: 75px; }
+      &.th-stage { min-width: 145px; }
+      &.th-owner { min-width: 150px; }
+      &.th-launch { min-width: 130px; }
+      &.th-due { min-width: 155px; }
+      &.th-status { min-width: 115px; }
+      &.th-next { min-width: 140px; }
+      &.th-actions { min-width: 130px; text-align: right; }
     }
   }
 
@@ -242,6 +258,119 @@
         padding: 14px 16px;
         vertical-align: middle;
         color: #1A1A1A;
+        white-space: nowrap;
+
+        &.td-stage {
+          white-space: normal;
+        }
+
+        &.td-status {
+          white-space: nowrap;
+        }
+      }
+    }
+  }
+}
+
+/* Date / Time Display */
+.date-time-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+
+  .date-primary {
+    font-weight: 600;
+    color: #1A1A1A;
+    font-size: 0.82rem;
+  }
+
+  .time-secondary {
+    font-size: 0.72rem;
+    color: #71716A;
+  }
+}
+
+.unscheduled-pill {
+  display: inline-block;
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 3px 8px;
+  border-radius: 4px;
+  background: #F4F4EE;
+  color: #8C8D82;
+  border: 1px dashed #D2D2CA;
+}
+
+.unassigned-owner-badge {
+  display: inline-block;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  padding: 3px 8px;
+  border-radius: 4px;
+  background: #FEF3C7;
+  color: #92400E;
+  border: 1px solid #FDE68A;
+}
+
+.owner-role-tag {
+  font-size: 0.65rem;
+  font-weight: 700;
+  padding: 1px 5px;
+  border-radius: 4px;
+  margin-left: 6px;
+  text-transform: uppercase;
+
+  &.admin {
+    background: #EDE9FE;
+    color: #5B21B6;
+    border: 1px solid #DDD6FE;
+  }
+}
+
+.table-actions-cell {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+
+  .table-action-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 5px 10px;
+    border-radius: 6px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    border: 1px solid #E5E5DC;
+    background: #FAFAF7;
+    color: #1A1A1A;
+    cursor: pointer;
+    transition: all $transition-fast;
+
+    &:hover {
+      background: #FFFFFF;
+      border-color: #000000;
+    }
+
+    &.edit-assignment-btn {
+      background: #FFFDF0;
+      border-color: #E2D810;
+      color: #716400;
+
+      &:hover {
+        background: #F2EA1A;
+        color: #000000;
+      }
+    }
+
+    &.view-details-btn {
+      color: #5A5B52;
+
+      &:hover {
+        color: #000000;
       }
     }
   }

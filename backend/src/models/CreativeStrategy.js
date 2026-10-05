@@ -58,7 +58,7 @@ const creativeStrategySchema = new mongoose.Schema(
       min: 1
     },
 
-    // 72-Hour Observation Tracking
+    // Observation Tracking & Scheduling
     launchedAt: {
       type: Date,
       default: null
@@ -66,6 +66,16 @@ const creativeStrategySchema = new mongoose.Schema(
     reportDueAt: {
       type: Date,
       default: null
+    },
+    observationDurationHours: {
+      type: Number,
+      default: 72,
+      min: 0.1
+    },
+    schedulingMode: {
+      type: String,
+      enum: ['DURATION', 'CUSTOM_DUE_DATE'],
+      default: 'DURATION'
     },
 
     // SECTION B — CREATIVE STRATEGY PLANNING DATES

@@ -576,12 +576,277 @@ const runTests = async () => {
         throw new Error(`TEST 15 FAILED: Missing expected timeline action: ${exp}`);
       }
     }
-    console.log('✓ TEST 15 PASSED: All major workflow transitions logged in immutable audit timeline.');
+    // =========================================================================
+    // TEST 16: Admin assigns an unassigned task & timeline / notification
+    // =========================================================================
+    console.log('\n--- TEST 16: Admin assigns an unassigned task ---');
+    const unassignedRecord = await creativeStrategyService.createCreativeStrategy(
+      {
+        clientId: client._id.toString(),
+        campaignId: campaign._id.toString(),
+        adSetId: adSet._id.toString(),
+        cycleNumber: 10,
+        currentTestingCycle: 'Cycle 10',
+        creativeName: 'Unassigned Test Record',
+        creativesProposed: 'Unassigned Test Record'
+        // no assignedTo
+      },
+      testAdmin
+    );
+    if (unassignedRecord.assignedTo) {
+      throw new Error('TEST 16 FAILED: Record should start unassigned');
+    }
+    console.log(`✓ Created unassigned record: ${unassignedRecord._id}`);
+
+    // Admin assigns testCS
+    const assignedRecord = await creativeStrategyService.updateCreativeStrategy(
+      unassignedRecord._id,
+      { assignedTo: testCS._id.toString() },
+      testAdmin
+    );
+    const assigned16Id = (assignedRecord.assignedTo?._id || assignedRecord.assignedTo)?.toString();
+    if (assigned16Id !== testCS._id.toString()) {
+      throw new Error(`TEST 16 FAILED: Record not assigned to testCS: ${assignedRecord.assignedTo}`);
+    }
+    const tl16 = await creativeStrategyService.getTimeline(unassignedRecord._id);
+    const assignCreatedAction = tl16.find((e) => e.action === 'ASSIGNMENT_CREATED');
+    if (!assignCreatedAction) {
+      throw new Error('TEST 16 FAILED: Timeline missing ASSIGNMENT_CREATED action');
+    }
+    const notif16 = await Notification.findOne({
+      creativeStrategy: unassignedRecord._id,
+      recipient: testCS._id,
+      type: 'ASSIGNMENT_UPDATED'
+    });
+    if (!notif16) {
+      throw new Error('TEST 16 FAILED: Notification not found for newly assigned user');
+    }
+    console.log('✓ TEST 16 PASSED: Admin assigned unassigned record, timeline logged ASSIGNMENT_CREATED, notification delivered.');
 
     // =========================================================================
-    // TEST 16: Admin deletion still leaves zero orphan records
+    // TEST 17: Admin self-assigns task
     // =========================================================================
-    console.log('\n--- TEST 16: Admin cascade deletion leaves zero orphan records ---');
+    console.log('\n--- TEST 17: Admin self-assignment ---');
+    const selfAssignedRecord = await creativeStrategyService.updateCreativeStrategy(
+      unassignedRecord._id,
+      { assignedTo: testAdmin._id.toString() },
+      testAdmin
+    );
+    const selfAssignedId = (selfAssignedRecord.assignedTo?._id || selfAssignedRecord.assignedTo)?.toString();
+    if (selfAssignedId !== testAdmin._id.toString()) {
+      throw new Error('TEST 17 FAILED: Admin self-assignment failed to persist');
+    }
+    console.log('✓ TEST 17 PASSED: Admin successfully assigned task to themselves.');
+
+    // =========================================================================
+    // TEST 18: Admin reassigns task from one user to another
+    // =========================================================================
+    console.log('\n--- TEST 18: Admin reassigns task from one user to another ---');
+    const reassignedRecord = await creativeStrategyService.updateCreativeStrategy(
+      unassignedRecord._id,
+      { assignedTo: testMB._id.toString() },
+      testAdmin
+    );
+    const reassignedId = (reassignedRecord.assignedTo?._id || reassignedRecord.assignedTo)?.toString();
+    if (reassignedId !== testMB._id.toString()) {
+      throw new Error('TEST 18 FAILED: Reassignment to testMB failed to persist');
+    }
+    const tl18 = await creativeStrategyService.getTimeline(unassignedRecord._id);
+    const reassignAction = tl18.find((e) => e.action === 'ASSIGNMENT_REASSIGNED');
+    if (!reassignAction) {
+      throw new Error('TEST 18 FAILED: Timeline missing ASSIGNMENT_REASSIGNED action');
+    }
+    const notif18 = await Notification.findOne({
+      creativeStrategy: unassignedRecord._id,
+      recipient: testMB._id,
+      type: 'ASSIGNMENT_UPDATED'
+    });
+    if (!notif18) {
+      throw new Error('TEST 18 FAILED: Notification not found for reassigned testMB');
+    }
+    console.log('✓ TEST 18 PASSED: Admin reassigned task, timeline logged ASSIGNMENT_REASSIGNED, notification delivered.');
+
+    // =========================================================================
+    // TEST 19: Non-admin is blocked from editing assignment (403 Forbidden)
+    // =========================================================================
+    console.log('\n--- TEST 19: Non-admin blocked from editing assignment ---');
+    let test19Passed = false;
+    try {
+      await creativeStrategyService.updateCreativeStrategy(
+        unassignedRecord._id,
+        { assignedTo: testGD._id.toString() },
+        testMB
+      );
+    } catch (err) {
+      if (err.statusCode === 403) {
+        test19Passed = true;
+        console.log(`✓ TEST 19 PASSED: Non-admin blocked with 403: "${err.message}"`);
+      } else {
+        console.error('❌ TEST 19 FAILED with unexpected error:', err);
+      }
+    }
+    if (!test19Passed) throw new Error('TEST 19 FAILED: Non-admin was permitted to edit assignment!');
+
+    // =========================================================================
+    // TEST 20: Task created without launch date (UNSCHEDULED) & scheduled later
+    // =========================================================================
+    console.log('\n--- TEST 20: Unscheduled task creation and scheduling later ---');
+    const unscheduledTask = await creativeStrategyService.createCreativeStrategy(
+      {
+        clientId: client._id.toString(),
+        campaignId: campaign._id.toString(),
+        adSetId: adSet._id.toString(),
+        cycleNumber: 11,
+        currentTestingCycle: 'Cycle 11',
+        creativeName: 'Unscheduled Test Record',
+        creativesProposed: 'Unscheduled Test Record'
+      },
+      testAdmin
+    );
+    if (unscheduledTask.launchDate || unscheduledTask.reportDueAt) {
+      throw new Error('TEST 20 FAILED: Unscheduled record should not have launchDate or reportDueAt');
+    }
+    console.log('✓ Unscheduled record created with null launchDate and null reportDueAt');
+
+    const scheduledDate = new Date();
+    const scheduledTask = await creativeStrategyService.updateCreativeStrategy(
+      unscheduledTask._id,
+      {
+        launchDate: scheduledDate,
+        observationDurationHours: 72
+      },
+      testAdmin
+    );
+    if (!scheduledTask.launchDate || !scheduledTask.reportDueAt) {
+      throw new Error('TEST 20 FAILED: Scheduled task missing launchDate or reportDueAt');
+    }
+    const tl20 = await creativeStrategyService.getTimeline(unscheduledTask._id);
+    const schedCreatedAction = tl20.find((e) => e.action === 'SCHEDULE_CREATED');
+    if (!schedCreatedAction) {
+      throw new Error('TEST 20 FAILED: Timeline missing SCHEDULE_CREATED action');
+    }
+    console.log(`✓ TEST 20 PASSED: Record scheduled later. reportDueAt calculated: ${scheduledTask.reportDueAt}`);
+
+    // =========================================================================
+    // TEST 21: Custom observation duration (48 hours and 53 hours / 2d 5h)
+    // =========================================================================
+    console.log('\n--- TEST 21: Custom observation duration calculation ---');
+    const baseLaunch = new Date('2026-10-10T10:00:00.000Z');
+    const task48h = await creativeStrategyService.updateCreativeStrategy(
+      unscheduledTask._id,
+      {
+        launchDate: baseLaunch,
+        observationDurationHours: 48,
+        schedulingMode: 'DURATION'
+      },
+      testAdmin
+    );
+    const expected48hDue = new Date(baseLaunch.getTime() + 48 * 3600 * 1000).toISOString();
+    if (new Date(task48h.reportDueAt).toISOString() !== expected48hDue) {
+      throw new Error(`TEST 21 FAILED: 48h due date mismatch: expected ${expected48hDue}, got ${task48h.reportDueAt}`);
+    }
+    console.log(`✓ 48h observation duration verified: due at ${task48h.reportDueAt}`);
+
+    // Test 53 hours (2 days 5 hours = 48 + 5 = 53h)
+    const task53h = await creativeStrategyService.updateCreativeStrategy(
+      unscheduledTask._id,
+      {
+        launchDate: baseLaunch,
+        observationDurationHours: 53,
+        schedulingMode: 'DURATION'
+      },
+      testAdmin
+    );
+    const expected53hDue = new Date(baseLaunch.getTime() + 53 * 3600 * 1000).toISOString();
+    if (new Date(task53h.reportDueAt).toISOString() !== expected53hDue) {
+      throw new Error(`TEST 21 FAILED: 53h due date mismatch: expected ${expected53hDue}, got ${task53h.reportDueAt}`);
+    }
+    console.log(`✓ TEST 21 PASSED: 53h (2d 5h) observation duration verified: due at ${task53h.reportDueAt}`);
+
+    // =========================================================================
+    // TEST 22: Custom due date/time option works & rejects due date before launch
+    // =========================================================================
+    console.log('\n--- TEST 22: Custom due date validation & acceptance ---');
+    // Try custom due date BEFORE launch date -> MUST reject with 400
+    let test22RejectPassed = false;
+    const invalidDueDate = new Date(baseLaunch.getTime() - 3600 * 1000); // 1 hour before
+    try {
+      await creativeStrategyService.updateCreativeStrategy(
+        unscheduledTask._id,
+        {
+          schedulingMode: 'CUSTOM_DUE_DATE',
+          reportDueAt: invalidDueDate
+        },
+        testAdmin
+      );
+    } catch (err) {
+      if (err.statusCode === 400 && err.message.toLowerCase().includes('after')) {
+        test22RejectPassed = true;
+        console.log(`✓ Invalid custom due date before launch correctly rejected with 400: "${err.message}"`);
+      } else {
+        console.error('❌ TEST 22 invalid date rejected with unexpected error:', err);
+      }
+    }
+    if (!test22RejectPassed) throw new Error('TEST 22 FAILED: Custom due date before launch date was not rejected!');
+
+    // Valid custom due date
+    const validCustomDueDate = new Date('2026-10-15T18:30:00.000Z');
+    const taskCustomDue = await creativeStrategyService.updateCreativeStrategy(
+      unscheduledTask._id,
+      {
+        schedulingMode: 'CUSTOM_DUE_DATE',
+        reportDueAt: validCustomDueDate
+      },
+      testAdmin
+    );
+    if (new Date(taskCustomDue.reportDueAt).toISOString() !== validCustomDueDate.toISOString()) {
+      throw new Error('TEST 22 FAILED: Valid custom due date was not saved properly');
+    }
+    console.log(`✓ TEST 22 PASSED: Valid custom due date set and preserved: ${taskCustomDue.reportDueAt}`);
+
+    // =========================================================================
+    // TEST 23: Editing schedule after launch updates active cycle timing without duplicate cycle
+    // =========================================================================
+    console.log('\n--- TEST 23: Schedule edit after launch updates timing without duplicate cycle ---');
+    // cycle2 is currently active (cycleNumber: 2)
+    const activeCycleBefore = await CreativeStrategy.findById(cycle2._id);
+    const newLaunchTime = new Date('2026-10-12T08:00:00.000Z');
+    const updatedCycle2 = await creativeStrategyService.updateCreativeStrategy(
+      cycle2._id,
+      {
+        launchDate: newLaunchTime,
+        observationDurationHours: 24,
+        schedulingMode: 'DURATION'
+      },
+      testAdmin
+    );
+    if (updatedCycle2.status === 'COMPLETED' || updatedCycle2.completedAt) {
+      throw new Error('TEST 23 FAILED: Active cycle was marked completed prematurely!');
+    }
+    if (new Date(updatedCycle2.launchDate).toISOString() !== newLaunchTime.toISOString()) {
+      throw new Error('TEST 23 FAILED: launchDate not updated on active cycle');
+    }
+    const expectedActiveDue = new Date(newLaunchTime.getTime() + 24 * 3600 * 1000).toISOString();
+    if (new Date(updatedCycle2.reportDueAt).toISOString() !== expectedActiveDue) {
+      throw new Error(`TEST 23 FAILED: reportDueAt mismatch on active cycle: expected ${expectedActiveDue}, got ${updatedCycle2.reportDueAt}`);
+    }
+    const totalCycle2Docs = await CreativeStrategy.countDocuments({
+      adSet: adSet._id,
+      cycleNumber: 2
+    });
+    if (totalCycle2Docs !== 1) {
+      throw new Error(`TEST 23 FAILED: Expected 1 Cycle 2 document, found ${totalCycle2Docs}`);
+    }
+    console.log('✓ TEST 23 PASSED: Active cycle updated in-place without duplicate cycle or completing prematurely.');
+
+    // Clean up temporary test records before cascade test
+    await CreativeStrategy.deleteMany({ _id: { $in: [unassignedRecord._id, unscheduledTask._id] } });
+    await CreativeStrategyTimeline.deleteMany({ creativeStrategy: { $in: [unassignedRecord._id, unscheduledTask._id] } });
+
+    // =========================================================================
+    // TEST 24: Admin cascade deletion leaves zero orphan records
+    // =========================================================================
+    console.log('\n--- TEST 24: Admin cascade deletion leaves zero orphan records ---');
     const preview = await clientService.getClientDeletePreview(client._id);
     console.log(
       `✓ Delete Preview: Client "${preview.clientName}" -> ${preview.campaignsCount} campaigns, ${preview.adSetsCount} ad sets, ${preview.recordsCount} records`
@@ -606,9 +871,9 @@ const runTests = async () => {
       orphansTimeline1.length > 0 ||
       orphansTimeline2.length > 0
     ) {
-      throw new Error('TEST 16 FAILED: Orphan records found after cascade delete!');
+      throw new Error('TEST 24 FAILED: Orphan records found after cascade delete!');
     }
-    console.log('✓ TEST 16 PASSED: Cascade deletion verified. Zero orphan records left in database.');
+    console.log('✓ TEST 24 PASSED: Cascade deletion verified. Zero orphan records left in database.');
 
     // Cleanup test users
     await User.deleteMany({
@@ -625,7 +890,7 @@ const runTests = async () => {
     console.log('✓ Cleaned up test users');
 
     console.log('\n====================================================');
-    console.log('🎉 ALL 16 AUDIT FIX TESTS PASSED WITH 100% SUCCESS!');
+    console.log('🎉 ALL 24 AUDIT & EDITABLE WORKFLOW TESTS PASSED WITH 100% SUCCESS!');
     console.log('====================================================\n');
   } catch (err) {
     console.error('\n❌ INTEGRATION TEST FAILED:', err);

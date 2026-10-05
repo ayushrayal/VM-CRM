@@ -11,6 +11,9 @@ export const createCreativeStrategySchema = z.object({
     campaignLaunchDate: z.string().nullable().optional(),
     currentAdSetName: z.string().optional(),
     launchDate: z.string().nullable().optional(),
+    observationDurationHours: z.number().min(0.1).max(8760).optional(),
+    schedulingMode: z.enum(['DURATION', 'CUSTOM_DUE_DATE']).optional(),
+    reportDueAt: z.string().nullable().optional(),
     cycleNumber: z.number().int().min(1).optional(),
     currentTestingCycle: z.string().optional(),
 
@@ -58,6 +61,9 @@ export const updateCreativeStrategySchema = z.object({
     campaignLaunchDate: z.string().nullable().optional(),
     currentAdSetName: z.string().optional(),
     launchDate: z.string().nullable().optional(),
+    observationDurationHours: z.number().min(0.1).max(8760).optional(),
+    schedulingMode: z.enum(['DURATION', 'CUSTOM_DUE_DATE']).optional(),
+    reportDueAt: z.string().nullable().optional(),
     cycleNumber: z.number().int().min(1).optional(),
     currentTestingCycle: z.string().optional(),
 

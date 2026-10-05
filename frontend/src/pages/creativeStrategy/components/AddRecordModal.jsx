@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Modal } from '../../../components/common/Modal';
 import { Input } from '../../../components/common/Input';
 import { Button } from '../../../components/common/Button';
@@ -25,6 +25,10 @@ export const AddRecordModal = ({
   const [cycleNumber, setCycleNumber] = useState(1);
   const [currentTestingCycle, setCurrentTestingCycle] = useState('Cycle 1');
 
+  // Launch timing & Observation duration
+  const [launchDate, setLaunchDate] = useState('');
+  const [observationDurationHours, setObservationDurationHours] = useState(72);
+
   // Planning Dates
   const [nextAssetDueDate, setNextAssetDueDate] = useState('');
   const [creativePrepDue, setCreativePrepDue] = useState('');
@@ -37,6 +41,28 @@ export const AddRecordModal = ({
   const [assignedCreativeStrategist, setAssignedCreativeStrategist] = useState('');
   const [assignedGraphicDesigner, setAssignedGraphicDesigner] = useState('');
   const [assignedTo, setAssignedTo] = useState('');
+
+  // Admins allowed in role assignments
+  const availableMediaBuyers = useMemo(() => {
+    const admins = allUsers.filter((u) => u.role === 'admin');
+    const map = new Map();
+    [...mediaBuyers, ...admins].forEach((u) => map.set(u._id, u));
+    return Array.from(map.values());
+  }, [mediaBuyers, allUsers]);
+
+  const availableCreativeStrategists = useMemo(() => {
+    const admins = allUsers.filter((u) => u.role === 'admin');
+    const map = new Map();
+    [...creativeStrategists, ...admins].forEach((u) => map.set(u._id, u));
+    return Array.from(map.values());
+  }, [creativeStrategists, allUsers]);
+
+  const availableGraphicDesigners = useMemo(() => {
+    const admins = allUsers.filter((u) => u.role === 'admin');
+    const map = new Map();
+    [...graphicDesigners, ...admins].forEach((u) => map.set(u._id, u));
+    return Array.from(map.values());
+  }, [graphicDesigners, allUsers]);
 
   // Recommendations & Strategy
   const [mediaBuyerRecommendation, setMediaBuyerRecommendation] = useState('');
@@ -95,6 +121,9 @@ export const AddRecordModal = ({
         creativeName: creativeName.trim() || creativesProposed.trim() || 'Creative #1',
         cycleNumber: Number(cycleNumber) || 1,
         currentTestingCycle,
+
+        launchDate: launchDate ? new Date(launchDate).toISOString() : null,
+        observationDurationHours: Number(observationDurationHours) || 72,
 
         nextAssetDueDate: nextAssetDueDate ? new Date(nextAssetDueDate).toISOString() : null,
         creativePrepDue: creativePrepDue ? new Date(creativePrepDue).toISOString() : null,
@@ -256,6 +285,25 @@ export const AddRecordModal = ({
               style={{ width: '100%', padding: '8px', background: '#FFFFFF', border: '1px solid #E5E5DC', borderRadius: '6px', color: '#1A1A1A' }}
             />
           </div>
+          <div>
+            <label style={{ display: 'block', marginBottom: '4px', fontSize: '0.8rem', color: '#5A5B52', fontWeight: 600 }}>Launch Date & Time (Optional)</label>
+            <input
+              type="datetime-local"
+              value={launchDate}
+              onChange={(e) => setLaunchDate(e.target.value)}
+              style={{ width: '100%', padding: '8px', background: '#FFFFFF', border: '1px solid #E5E5DC', borderRadius: '6px', color: '#1A1A1A' }}
+            />
+          </div>
+          <div>
+            <label style={{ display: 'block', marginBottom: '4px', fontSize: '0.8rem', color: '#5A5B52', fontWeight: 600 }}>Observation Duration (Hours)</label>
+            <input
+              type="number"
+              min="1"
+              value={observationDurationHours}
+              onChange={(e) => setObservationDurationHours(e.target.value)}
+              style={{ width: '100%', padding: '8px', background: '#FFFFFF', border: '1px solid #E5E5DC', borderRadius: '6px', color: '#1A1A1A' }}
+            />
+          </div>
         </div>
 
         {/* Section C & D: Assignments */}
@@ -273,8 +321,8 @@ export const AddRecordModal = ({
               style={{ width: '100%', padding: '8px', background: '#FFFFFF', border: '1px solid #E5E5DC', borderRadius: '6px', color: '#1A1A1A' }}
             >
               <option value="">Unassigned</option>
-              {mediaBuyers.map((u) => (
-                <option key={u._id} value={u._id}>{u.name} ({u.email})</option>
+              {availableMediaBuyers.map((u) => (
+                <option key={u._id} value={u._id}>{u.name} {u.role === 'admin' ? '(Admin)' : `(${u.email})`}</option>
               ))}
             </select>
           </div>
@@ -289,8 +337,8 @@ export const AddRecordModal = ({
               style={{ width: '100%', padding: '8px', background: '#FFFFFF', border: '1px solid #E5E5DC', borderRadius: '6px', color: '#1A1A1A' }}
             >
               <option value="">Unassigned</option>
-              {creativeStrategists.map((u) => (
-                <option key={u._id} value={u._id}>{u.name} ({u.email})</option>
+              {availableCreativeStrategists.map((u) => (
+                <option key={u._id} value={u._id}>{u.name} {u.role === 'admin' ? '(Admin)' : `(${u.email})`}</option>
               ))}
             </select>
           </div>
@@ -305,8 +353,8 @@ export const AddRecordModal = ({
               style={{ width: '100%', padding: '8px', background: '#FFFFFF', border: '1px solid #E5E5DC', borderRadius: '6px', color: '#1A1A1A' }}
             >
               <option value="">Unassigned</option>
-              {graphicDesigners.map((u) => (
-                <option key={u._id} value={u._id}>{u.name} ({u.email})</option>
+              {availableGraphicDesigners.map((u) => (
+                <option key={u._id} value={u._id}>{u.name} {u.role === 'admin' ? '(Admin)' : `(${u.email})`}</option>
               ))}
             </select>
           </div>

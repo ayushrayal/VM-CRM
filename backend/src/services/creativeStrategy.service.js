@@ -205,15 +205,32 @@ export const createCreativeStrategy = async (data, user) => {
     const adSet = await AdSet.findById(data.adSetId);
     if (adSet) {
       currentAdSetName = adSet.name;
-      if (!launchDate && adSet.launchDate) {
-        launchDate = adSet.launchDate;
-      }
     }
   }
 
   const cycleNum = data.cycleNumber ? Number(data.cycleNumber) : 1;
   const currentTestingCycle = data.currentTestingCycle || `Cycle ${cycleNum}`;
   const creativeName = data.creativeName?.trim() || data.creativesProposed?.trim() || `Creative #${Date.now().toString().slice(-4)}`;
+
+  const observationDurationHours = data.observationDurationHours !== undefined && data.observationDurationHours !== null
+    ? Number(data.observationDurationHours)
+    : 72;
+  const schedulingMode = data.schedulingMode || 'DURATION';
+
+  let reportDueAt = null;
+  if (launchDate) {
+    if (schedulingMode === 'CUSTOM_DUE_DATE' && data.reportDueAt) {
+      const customDue = new Date(data.reportDueAt);
+      if (!isNaN(customDue.getTime())) {
+        if (customDue.getTime() <= launchDate.getTime()) {
+          throw new ApiError(400, 'Report due date and time must be after launch date and time');
+        }
+        reportDueAt = customDue;
+      }
+    } else {
+      reportDueAt = new Date(launchDate.getTime() + observationDurationHours * 3600 * 1000);
+    }
+  }
 
   const record = await CreativeStrategy.create({
     client: client._id,
@@ -224,6 +241,9 @@ export const createCreativeStrategy = async (data, user) => {
     campaignLaunchDate,
     currentAdSetName,
     launchDate,
+    reportDueAt,
+    observationDurationHours,
+    schedulingMode,
     cycleNumber: cycleNum,
     currentTestingCycle,
 
@@ -284,6 +304,21 @@ export const updateCreativeStrategy = async (id, updateData, user) => {
     );
   }
 
+  // Admin-only management verification for assignments, schedules, and stage overrides
+  const isAssignmentOrScheduleChange =
+    updateData.assignedMediaBuyer !== undefined ||
+    updateData.assignedCreativeStrategist !== undefined ||
+    updateData.assignedGraphicDesigner !== undefined ||
+    updateData.assignedTo !== undefined ||
+    updateData.launchDate !== undefined ||
+    updateData.observationDurationHours !== undefined ||
+    updateData.schedulingMode !== undefined ||
+    updateData.reportDueAt !== undefined;
+
+  if (isAssignmentOrScheduleChange && user?.role !== 'admin') {
+    throw new ApiError(403, 'Access denied. Only an Admin can manage assignments and scheduling.');
+  }
+
   // Prevent circular parentItems
   if (updateData.parentItems) {
     updateData.parentItems = updateData.parentItems.filter(
@@ -291,7 +326,7 @@ export const updateCreativeStrategy = async (id, updateData, user) => {
     );
   }
 
-  // Track assignment changes for audit trail
+  // Track assignment changes for audit trail & notifications
   const assignmentFields = [
     { key: 'assignedMediaBuyer', label: 'Media Buyer', roleNeeded: 'media_buyer' },
     { key: 'assignedCreativeStrategist', label: 'Creative Strategist', roleNeeded: 'creative_strategist' },
@@ -304,27 +339,187 @@ export const updateCreativeStrategy = async (id, updateData, user) => {
       const oldVal = record[field.key]?.toString() || null;
       const newVal = updateData[field.key] ? updateData[field.key].toString() : null;
       if (oldVal !== newVal) {
+        let oldUserName = 'Unassigned';
+        if (oldVal) {
+          const oldUser = await User.findById(oldVal);
+          if (oldUser) oldUserName = oldUser.name;
+        }
+
         let newUserName = 'Unassigned';
+        let newUserObj = null;
         if (newVal) {
-          const u = await User.findById(newVal);
-          if (u) {
-            // Strict role verification if required
-            if (field.roleNeeded && u.teamRole !== field.roleNeeded && u.role !== 'admin') {
-              throw new ApiError(400, `Selected user must have teamRole '${field.roleNeeded}'`);
-            }
-            newUserName = u.name;
+          newUserObj = await User.findById(newVal);
+          if (newUserObj) {
+            newUserName = newUserObj.name;
           }
         }
+
+        let action = TIMELINE_ACTION.ASSIGNMENT_UPDATED;
+        let note = `${field.label} updated to ${newUserName}`;
+
+        if (!oldVal && newVal) {
+          action = TIMELINE_ACTION.ASSIGNMENT_CREATED;
+          note = `${field.label} assigned to ${newUserName}`;
+        } else if (oldVal && newVal) {
+          action = TIMELINE_ACTION.ASSIGNMENT_REASSIGNED;
+          note = `${field.label} reassigned from ${oldUserName} to ${newUserName}`;
+        } else if (oldVal && !newVal) {
+          action = TIMELINE_ACTION.ASSIGNMENT_UPDATED;
+          note = `${field.label} unassigned (previously ${oldUserName})`;
+        }
+
         await recordTimelineEvent({
           creativeStrategyId: record._id,
           actor: user,
-          action: TIMELINE_ACTION.ASSIGNMENT_CHANGED,
+          action,
           stage: 'Assignment',
-          notes: `${field.label} updated to ${newUserName}`,
-          metadata: { field: field.key, oldVal, newVal }
+          notes: note,
+          metadata: {
+            field: field.key,
+            oldVal,
+            newVal,
+            oldUserName,
+            newUserName,
+            oldValue: oldUserName,
+            newValue: newUserName
+          }
         });
+
+        // Send notification to newly assigned user
+        if (newVal && newUserObj) {
+          await notificationService.createNotification({
+            recipient: newVal,
+            sender: user._id,
+            senderName: user.name,
+            title: `Task Assignment: ${record.creativeName || record.creativesProposed || 'Creative'}`,
+            message: `You have been assigned as ${field.label} for "${record.creativeName || record.creativesProposed || 'Creative'}" (${record.currentTestingCycle}) by ${user.name}.`,
+            creativeStrategy: record._id,
+            cycleNumber: record.cycleNumber,
+            type: 'ASSIGNMENT_UPDATED'
+          });
+        }
       }
     }
+  }
+
+  // Schedule tracking & validation
+  const scheduleChanged =
+    updateData.launchDate !== undefined ||
+    updateData.observationDurationHours !== undefined ||
+    updateData.schedulingMode !== undefined ||
+    updateData.reportDueAt !== undefined;
+
+  if (scheduleChanged) {
+    const oldLaunch = record.launchDate;
+    const oldDue = record.reportDueAt;
+    const oldDuration = record.observationDurationHours || 72;
+
+    let newLaunchDate = record.launchDate;
+    if (updateData.launchDate !== undefined) {
+      newLaunchDate = updateData.launchDate ? new Date(updateData.launchDate) : null;
+      if (newLaunchDate && isNaN(newLaunchDate.getTime())) {
+        throw new ApiError(400, 'Invalid launch date');
+      }
+    }
+
+    const schedulingMode = updateData.schedulingMode || record.schedulingMode || 'DURATION';
+    record.schedulingMode = schedulingMode;
+
+    let newReportDue = record.reportDueAt;
+    let newDuration = record.observationDurationHours || 72;
+
+    if (schedulingMode === 'CUSTOM_DUE_DATE') {
+      if (updateData.reportDueAt !== undefined) {
+        newReportDue = updateData.reportDueAt ? new Date(updateData.reportDueAt) : null;
+      }
+      if (newLaunchDate && newReportDue) {
+        if (isNaN(newReportDue.getTime())) {
+          throw new ApiError(400, 'Invalid report due date');
+        }
+        if (newReportDue.getTime() <= newLaunchDate.getTime()) {
+          throw new ApiError(400, 'Report due date and time must be after launch date and time');
+        }
+        newDuration = (newReportDue.getTime() - newLaunchDate.getTime()) / (3600 * 1000);
+      }
+    } else {
+      // DURATION mode
+      if (updateData.observationDurationHours !== undefined) {
+        newDuration = Number(updateData.observationDurationHours);
+        if (isNaN(newDuration) || newDuration <= 0) {
+          throw new ApiError(400, 'Observation duration must be a positive number');
+        }
+      }
+      if (newLaunchDate) {
+        newReportDue = new Date(newLaunchDate.getTime() + newDuration * 3600 * 1000);
+      } else {
+        newReportDue = null;
+      }
+    }
+
+    record.launchDate = newLaunchDate;
+    record.observationDurationHours = newDuration;
+    record.reportDueAt = newReportDue;
+
+    // If active creative was already launched, update active cycle's timing!
+    if (record.status === WORKFLOW_STATUS.LAUNCHED || record.launchedAt) {
+      if (newLaunchDate) {
+        record.launchedAt = newLaunchDate;
+      }
+    }
+
+    const isFirstSchedule = !oldLaunch && newLaunchDate;
+    const action = isFirstSchedule ? TIMELINE_ACTION.SCHEDULE_CREATED : TIMELINE_ACTION.SCHEDULE_UPDATED;
+
+    const oldLaunchStr = oldLaunch ? oldLaunch.toISOString() : 'UNSCHEDULED';
+    const newLaunchStr = newLaunchDate ? newLaunchDate.toISOString() : 'UNSCHEDULED';
+    const oldDueStr = oldDue ? oldDue.toISOString() : 'UNSCHEDULED';
+    const newDueStr = newReportDue ? newReportDue.toISOString() : 'UNSCHEDULED';
+
+    await recordTimelineEvent({
+      creativeStrategyId: record._id,
+      actor: user,
+      action,
+      stage: 'Schedule',
+      notes: isFirstSchedule
+        ? `Schedule created: Launch ${newLaunchStr}, Duration ${newDuration}h, Report Due ${newDueStr}`
+        : `Schedule updated: Launch ${oldLaunchStr} -> ${newLaunchStr}, Duration ${oldDuration}h -> ${newDuration}h, Due ${oldDueStr} -> ${newDueStr}`,
+      metadata: {
+        oldLaunchDate: oldLaunch,
+        newLaunchDate,
+        oldReportDueAt: oldDue,
+        newReportDueAt: newReportDue,
+        oldDuration,
+        newDuration,
+        schedulingMode,
+        oldValue: `Launch: ${oldLaunchStr}, Due: ${oldDueStr}`,
+        newValue: `Launch: ${newLaunchStr}, Due: ${newDueStr}`
+      }
+    });
+  }
+
+  // Stage change tracking
+  if (updateData.status && updateData.status !== record.status) {
+    const oldStatus = record.status;
+    const newStatus = updateData.status;
+
+    if (newStatus === WORKFLOW_STATUS.LAUNCHED && !record.launchedAt) {
+      record.launchedAt = record.launchDate || new Date();
+      if (!record.reportDueAt) {
+        const duration = record.observationDurationHours || 72;
+        record.reportDueAt = new Date(record.launchedAt.getTime() + duration * 3600 * 1000);
+      }
+    }
+
+    record.status = newStatus;
+
+    await recordTimelineEvent({
+      creativeStrategyId: record._id,
+      actor: user,
+      action: TIMELINE_ACTION.STAGE_CHANGED,
+      stage: 'Stage Update',
+      notes: `Stage changed from ${oldStatus} to ${newStatus}`,
+      metadata: { oldStatus, newStatus, oldValue: oldStatus, newValue: newStatus }
+    });
   }
 
   // Audit decision change
@@ -457,8 +652,14 @@ export const launchCreative = async (id, { launchProof }, user) => {
 
   const now = new Date();
   record.status = WORKFLOW_STATUS.LAUNCHED;
-  record.launchedAt = now;
-  record.reportDueAt = new Date(now.getTime() + 72 * 3600 * 1000); // exactly 72h from launch
+  if (!record.launchDate) {
+    record.launchDate = now;
+  }
+  record.launchedAt = record.launchedAt || record.launchDate || now;
+  const durationHours = record.observationDurationHours || 72;
+  if (!record.reportDueAt || record.schedulingMode === 'DURATION') {
+    record.reportDueAt = new Date(record.launchedAt.getTime() + durationHours * 3600 * 1000);
+  }
   if (launchProof) record.launchProof = launchProof.trim();
 
   await record.save();
@@ -468,7 +669,7 @@ export const launchCreative = async (id, { launchProof }, user) => {
     actor: user,
     action: TIMELINE_ACTION.CREATIVE_LAUNCHED,
     stage: 'Launch',
-    notes: `Creative launched. 72-hour observation timer started. Due at: ${record.reportDueAt.toISOString()}`
+    notes: `Creative launched. ${durationHours}-hour observation timer started. Due at: ${record.reportDueAt.toISOString()}`
   });
 
   // Notify assigned Creative Strategist that creative is live
@@ -477,8 +678,8 @@ export const launchCreative = async (id, { launchProof }, user) => {
       recipient: record.assignedCreativeStrategist,
       sender: user._id,
       senderName: user.name,
-      title: 'Creative Launched — 72H Observation Clock Started',
-      message: `Creative "${record.creativeName || record.creativesProposed}" was launched by Media Buyer ${user.name} for ${record.client?.name || 'Client'}. 72-hour observation clock has started.`,
+      title: 'Creative Launched — Observation Clock Started',
+      message: `Creative "${record.creativeName || record.creativesProposed}" was launched by Media Buyer ${user.name} for ${record.client?.name || 'Client'}. ${durationHours}-hour observation clock has started.`,
       creativeStrategy: record._id,
       cycleNumber: record.cycleNumber,
       type: 'CREATIVE_LAUNCHED'
@@ -520,15 +721,33 @@ export const submitReport = async (
     throw new ApiError(400, 'Cannot submit report: Creative has not been launched yet.');
   }
 
-  // BACKEND 72-HOUR ENFORCEMENT
-  const elapsedMs = Date.now() - new Date(record.launchedAt).getTime();
-  const elapsedHours = elapsedMs / (1000 * 60 * 60);
+  // BACKEND OBSERVATION ENFORCEMENT
+  const durationHours = record.observationDurationHours || 72;
+  const isCustomDue = record.schedulingMode === 'CUSTOM_DUE_DATE' && record.reportDueAt;
 
-  if (elapsedHours < 72) {
-    const remainingHours = Math.ceil(72 - elapsedHours);
+  let isLocked = false;
+  let remainingHours = 0;
+
+  if (isCustomDue) {
+    const dueTime = new Date(record.reportDueAt).getTime();
+    if (Date.now() < dueTime) {
+      isLocked = true;
+      remainingHours = Math.ceil((dueTime - Date.now()) / (1000 * 60 * 60));
+    }
+  } else {
+    const elapsedMs = Date.now() - new Date(record.launchedAt).getTime();
+    const elapsedHours = elapsedMs / (1000 * 60 * 60);
+    if (elapsedHours < durationHours) {
+      isLocked = true;
+      remainingHours = Math.ceil(durationHours - elapsedHours);
+    }
+  }
+
+  if (isLocked) {
+    const durationLabel = durationHours === 72 ? '72 hours' : `${durationHours} hour(s)`;
     throw new ApiError(
       400,
-      `Performance report is locked for 72 hours post-launch. Approximately ${remainingHours} hour(s) remaining.`
+      `Performance report is locked for ${durationLabel} post-launch. Approximately ${remainingHours} hour(s) remaining.`
     );
   }
 
@@ -1333,10 +1552,11 @@ export const completeAndCreateNextCycle = async (id, user, options = {}) => {
   const nextCycleNum = (currentRecord.cycleNumber || 1) + 1;
   const nextTestingCycle = `Cycle ${nextCycleNum}`;
 
-  // If autoLaunch is true (e.g. Media buyer records launch of next cycle), start 72h observation period
+  // If autoLaunch is true (e.g. Media buyer records launch of next cycle), start observation period
   const isAutoLaunch = options.autoLaunch !== false; // default true
   const launchedAtTime = isAutoLaunch ? now : null;
-  const reportDueAtTime = isAutoLaunch ? new Date(now.getTime() + 72 * 3600 * 1000) : null;
+  const durationHours = currentRecord.observationDurationHours || 72;
+  const reportDueAtTime = isAutoLaunch ? new Date(now.getTime() + durationHours * 3600 * 1000) : null;
   const initialStatus = isAutoLaunch ? WORKFLOW_STATUS.LAUNCHED : WORKFLOW_STATUS.PENDING_LAUNCH;
 
   const nextRecord = await CreativeStrategy.create({
@@ -1350,6 +1570,8 @@ export const completeAndCreateNextCycle = async (id, user, options = {}) => {
     launchDate: isAutoLaunch ? now : null,
     launchedAt: launchedAtTime,
     reportDueAt: reportDueAtTime,
+    observationDurationHours: durationHours,
+    schedulingMode: currentRecord.schedulingMode || 'DURATION',
     cycleNumber: nextCycleNum,
     currentTestingCycle: nextTestingCycle,
 

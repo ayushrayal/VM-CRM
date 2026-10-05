@@ -35,8 +35,9 @@ import { AddAdSetModal } from './components/AddAdSetModal';
 import { DeleteAdSetModal } from './components/DeleteAdSetModal';
 import { AddRecordModal } from './components/AddRecordModal';
 import { DeleteCreativeModal } from './components/DeleteCreativeModal';
+import { EditAssignmentModal } from './components/EditAssignmentModal';
 
-import { formatDate, formatDateTime, formatDurationMs } from '../../utils/dateUtils';
+import { formatDate, formatDateTime, formatTime, formatDurationMs } from '../../utils/dateUtils';
 import { Button } from '../../components/common/Button';
 import './CreativeStrategyPage.scss';
 
@@ -85,6 +86,9 @@ export const CreativeStrategyPage = () => {
   const [isAddRecordOpen, setIsAddRecordOpen] = useState(false);
   const [isDeleteCreativeOpen, setIsDeleteCreativeOpen] = useState(false);
   const [creativeToDelete, setCreativeToDelete] = useState(null);
+
+  const [isEditAssignmentOpen, setIsEditAssignmentOpen] = useState(false);
+  const [recordToEdit, setRecordToEdit] = useState(null);
 
   // Timer interval for real-time 72h countdowns
   useEffect(() => {
@@ -377,24 +381,35 @@ export const CreativeStrategyPage = () => {
     if (r.status === 'COMPLETED') return { role: 'None', name: 'Archived', bg: '#F1F5F9', color: '#64748B' };
     if (r.status === 'PAUSED') return { role: 'Admin', name: 'Paused', bg: '#FEF2F2', color: '#991B1B' };
     if (r.status === 'PENDING_LAUNCH' || r.status === 'LAUNCHED' || r.status === 'PENDING_REPORT') {
-      return { role: 'Media Buyer', name: r.assignedMediaBuyer?.name || 'Unassigned', bg: '#EFF6FF', color: '#1D4ED8' };
+      const name = r.assignedMediaBuyer?.name || r.assignedTo?.name || 'UNASSIGNED';
+      const isAdminUser = r.assignedMediaBuyer?.role === 'admin' || r.assignedTo?.role === 'admin';
+      return { role: 'Media Buyer', name, bg: '#EFF6FF', color: '#1D4ED8', isAdmin: isAdminUser };
     }
     if (r.status === 'REPORT_SUBMITTED' || r.status === 'BRIEF_SUBMITTED' || r.status === 'INTERNAL_REVIEW') {
-      return { role: 'Creative Strategist', name: r.assignedCreativeStrategist?.name || 'Unassigned', bg: '#FDF4FF', color: '#A21CAF' };
+      const name = r.assignedCreativeStrategist?.name || r.assignedTo?.name || 'UNASSIGNED';
+      const isAdminUser = r.assignedCreativeStrategist?.role === 'admin' || r.assignedTo?.role === 'admin';
+      return { role: 'Creative Strategist', name, bg: '#FDF4FF', color: '#A21CAF', isAdmin: isAdminUser };
     }
     if (r.status === 'LEARNINGS_SUBMITTED' || r.status === 'PRODUCTION') {
-      return { role: 'Graphic Designer', name: r.assignedGraphicDesigner?.name || 'Unassigned', bg: '#F0FDF4', color: '#15803D' };
+      const name = r.assignedGraphicDesigner?.name || r.assignedTo?.name || 'UNASSIGNED';
+      const isAdminUser = r.assignedGraphicDesigner?.role === 'admin' || r.assignedTo?.role === 'admin';
+      return { role: 'Graphic Designer', name, bg: '#F0FDF4', color: '#15803D', isAdmin: isAdminUser };
     }
     if (r.status === 'CLIENT_REVIEW') {
-      return { role: 'Final Approver', name: 'Admin (Abhishek)', bg: '#FFFBEB', color: '#B45309' };
+      return { role: 'Final Approver', name: 'Admin (Abhishek)', bg: '#FFFBEB', color: '#B45309', isAdmin: true };
     }
     if (r.status === 'CLIENT_APPROVED' || r.status === 'READY_TO_LAUNCH' || r.status === 'HANDOFF') {
-      return { role: 'Media Buyer', name: r.assignedMediaBuyer?.name || 'Unassigned', bg: '#EFF6FF', color: '#1D4ED8' };
+      const name = r.assignedMediaBuyer?.name || r.assignedTo?.name || 'UNASSIGNED';
+      const isAdminUser = r.assignedMediaBuyer?.role === 'admin' || r.assignedTo?.role === 'admin';
+      return { role: 'Media Buyer', name, bg: '#EFF6FF', color: '#1D4ED8', isAdmin: isAdminUser };
     }
     if (r.status === 'REVISION_REQUESTED') {
-      return { role: 'Graphic Designer', name: r.assignedGraphicDesigner?.name || 'Unassigned', bg: '#FFF7ED', color: '#C2410C' };
+      const name = r.assignedGraphicDesigner?.name || r.assignedTo?.name || 'UNASSIGNED';
+      const isAdminUser = r.assignedGraphicDesigner?.role === 'admin' || r.assignedTo?.role === 'admin';
+      return { role: 'Graphic Designer', name, bg: '#FFF7ED', color: '#C2410C', isAdmin: isAdminUser };
     }
-    return { role: 'Team', name: 'Unassigned', bg: '#F4F4EE', color: '#5A5B52' };
+    const name = r.assignedTo?.name || 'UNASSIGNED';
+    return { role: 'Team', name, bg: '#F4F4EE', color: '#5A5B52', isAdmin: r.assignedTo?.role === 'admin' };
   };
 
   // Filtered Records based on Client tab, Search, Cycle and Status
@@ -630,7 +645,7 @@ export const CreativeStrategyPage = () => {
                   <th>Current Stage</th>
                   <th>Current Owner</th>
                   <th>Launch Date</th>
-                  <th>72-hour Report Due</th>
+                  <th>Report Due</th>
                   <th>Status</th>
                   <th>Next Action</th>
                   <th>Actions</th>
@@ -711,57 +726,99 @@ export const CreativeStrategyPage = () => {
                       <td>
                         {(() => {
                           const owner = getCurrentOwner(r);
+                          const isUnassigned = owner.name === 'UNASSIGNED' || owner.name === 'Unassigned';
                           return (
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
                               <span style={{ fontSize: '0.72rem', fontWeight: 700, color: '#8C8D82', textTransform: 'uppercase' }}>
                                 {owner.role}
                               </span>
-                              <span
-                                style={{
-                                  fontSize: '0.78rem',
-                                  fontWeight: 600,
-                                  padding: '2px 8px',
-                                  borderRadius: '4px',
-                                  width: 'fit-content',
-                                  background: owner.bg,
-                                  color: owner.color
-                                }}
-                              >
-                                {owner.name}
-                              </span>
+                              {isUnassigned ? (
+                                <span className="unassigned-owner-badge">
+                                  UNASSIGNED
+                                </span>
+                              ) : (
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                  <span
+                                    style={{
+                                      fontSize: '0.78rem',
+                                      fontWeight: 600,
+                                      padding: '2px 8px',
+                                      borderRadius: '4px',
+                                      width: 'fit-content',
+                                      background: owner.bg,
+                                      color: owner.color
+                                    }}
+                                  >
+                                    {owner.name}
+                                  </span>
+                                  {owner.isAdmin && (
+                                    <span style={{ fontSize: '0.65rem', background: '#FEF9C3', color: '#854D0E', padding: '1px 4px', borderRadius: '3px', fontWeight: 700, border: '1px solid #FDE047' }}>
+                                      Admin
+                                    </span>
+                                  )}
+                                </div>
+                              )}
                             </div>
                           );
                         })()}
                       </td>
 
                       {/* Launch Date */}
-                      <td style={{ fontSize: '0.8rem', whiteSpace: 'nowrap' }}>
-                        {formatDate(r.launchedAt || r.launchDate)}
+                      <td>
+                        {r.launchedAt || r.launchDate ? (
+                          <div className="date-time-cell">
+                            <span className="date-line">{formatDate(r.launchedAt || r.launchDate)}</span>
+                            <span className="time-line">{formatTime(r.launchedAt || r.launchDate)}</span>
+                          </div>
+                        ) : (
+                          <span className="unscheduled-pill">UNSCHEDULED</span>
+                        )}
                       </td>
 
-                      {/* 72-hour Report Due */}
+                      {/* Report Due */}
                       <td>
                         {r.status === 'LAUNCHED' && r.reportDueAt ? (
                           <div className="report-due-indicator">
-                            <span className="due-time">{formatDateTime(r.reportDueAt)}</span>
+                            <span className="due-label">
+                              {r.observationDurationHours && r.observationDurationHours !== 72
+                                ? `REPORT DUE (${r.observationDurationHours}H)`
+                                : '72-HOUR REPORT DUE'}
+                            </span>
+                            <div className="date-time-cell">
+                              <span className="date-line">{formatDate(r.reportDueAt)}</span>
+                              <span className="time-line">{formatTime(r.reportDueAt)}</span>
+                            </div>
                             {isLocked ? (
                               <span className="lock-countdown">🔒 {formatDurationMs(remainingMs)} left</span>
                             ) : (
-                              <span style={{ color: '#166534', fontWeight: 700, fontSize: '0.72rem' }}>🔓 UNLOCKED</span>
+                              <span className="unlocked-badge">🔓 UNLOCKED</span>
                             )}
                           </div>
+                        ) : r.reportDueAt ? (
+                          <div className="report-due-indicator">
+                            <span className="due-label">
+                              {r.observationDurationHours && r.observationDurationHours !== 72
+                                ? `REPORT DUE (${r.observationDurationHours}H)`
+                                : '72-HOUR REPORT DUE'}
+                            </span>
+                            <div className="date-time-cell">
+                              <span className="date-line">{formatDate(r.reportDueAt)}</span>
+                              <span className="time-line">{formatTime(r.reportDueAt)}</span>
+                            </div>
+                          </div>
                         ) : r.reportSubmittedAt ? (
-                          <span style={{ color: '#166534', fontSize: '0.78rem', fontWeight: 600 }}>
-                            Submitted {formatDate(r.reportSubmittedAt)}
-                          </span>
+                          <div className="report-submitted-cell">
+                            <span style={{ color: '#166534', fontSize: '0.78rem', fontWeight: 700 }}>✓ Submitted</span>
+                            <span className="date-line" style={{ fontSize: '0.75rem', color: '#5A5B52' }}>{formatDate(r.reportSubmittedAt)}</span>
+                          </div>
                         ) : (
-                          <span style={{ color: '#8C8D82' }}>—</span>
+                          <span className="unscheduled-pill">UNSCHEDULED</span>
                         )}
                       </td>
 
                       {/* Status */}
                       <td>
-                        <StatusBadge status={r.status} />
+                        <StatusBadge status={r.status} record={r} />
                       </td>
 
                       {/* Next Action */}
@@ -779,6 +836,18 @@ export const CreativeStrategyPage = () => {
                           >
                             Workspace
                           </Button>
+                          {isAdmin && (
+                            <Button
+                              variant="secondary"
+                              size="sm"
+                              onClick={() => {
+                                setRecordToEdit(r);
+                                setIsEditAssignmentOpen(true);
+                              }}
+                            >
+                              Edit
+                            </Button>
+                          )}
                           {isAdmin && (
                             <Button
                               variant="ghost"
@@ -893,6 +962,17 @@ export const CreativeStrategyPage = () => {
         }}
         record={creativeToDelete}
         onConfirm={handleDeleteCreativeConfirm}
+      />
+
+      <EditAssignmentModal
+        isOpen={isEditAssignmentOpen}
+        onClose={() => {
+          setIsEditAssignmentOpen(false);
+          setRecordToEdit(null);
+        }}
+        record={recordToEdit}
+        allUsers={allUsers}
+        onSubmit={handleUpdateRecord}
       />
     </div>
   );

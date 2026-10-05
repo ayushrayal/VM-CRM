@@ -11,3 +11,6 @@ test-production-serving.js
 test-creative-gamiply.js
 test-clients-and-new-scoring.js
 test-client-bug-flow.js
+test-client-baseline-and-scoring.js
+test-scheduling-loop-fix.js
+test-creative-and-client-baseline.js

@@ -16,6 +16,7 @@ import {
   resumeCreative
 } from '../../../api/creativeStrategy.api';
 import { StatusBadge } from './StatusBadge';
+import { EditAssignmentModal } from './EditAssignmentModal';
 import { formatDate, formatDateTime, formatDurationMs } from '../../../utils/dateUtils';
 import { Button } from '../../../components/common/Button';
 import './RecordDrawer.scss';
@@ -59,6 +60,7 @@ export const RecordDrawer = ({
   const [now, setNow] = useState(Date.now());
   const [actionError, setActionError] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
 
   // Form states
   const [launchProofInput, setLaunchProofInput] = useState('');
@@ -179,12 +181,13 @@ export const RecordDrawer = ({
 
   if (!isOpen || !record) return null;
 
-  // 72-Hour calculations
+  // Observation duration & lock calculations
+  const durationHours = record.observationDurationHours != null ? Number(record.observationDurationHours) : 72;
   const launchedTime = record.launchedAt ? new Date(record.launchedAt).getTime() : null;
   const unlockReportTime = record.reportDueAt
     ? new Date(record.reportDueAt).getTime()
     : launchedTime
-    ? launchedTime + 72 * 3600 * 1000
+    ? launchedTime + durationHours * 3600 * 1000
     : null;
   const isReportLocked = unlockReportTime ? now < unlockReportTime : true;
   const remainingReportMs = unlockReportTime ? Math.max(0, unlockReportTime - now) : 0;
@@ -482,6 +485,16 @@ export const RecordDrawer = ({
                   Launched {formatDate(record.launchedAt)}
                 </span>
               )}
+              {isAdmin && (
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => setIsEditModalOpen(true)}
+                  style={{ marginLeft: '6px' }}
+                >
+                  ✏ Edit Assignment & Schedule
+                </Button>
+              )}
             </div>
           </div>
           <button className="drawer-close-btn" onClick={onClose} aria-label="Close workspace">
@@ -546,7 +559,7 @@ export const RecordDrawer = ({
             <div className="slot-avatar">MB</div>
             <div className="slot-info">
               <div className="slot-label">Media Buyer</div>
-              <div className="slot-name">{record.assignedMediaBuyer?.name || 'Unassigned'}</div>
+              <div className="slot-name">{record.assignedMediaBuyer?.name || 'UNASSIGNED'}</div>
             </div>
           </div>
 
@@ -554,7 +567,7 @@ export const RecordDrawer = ({
             <div className="slot-avatar">CS</div>
             <div className="slot-info">
               <div className="slot-label">Creative Strategist</div>
-              <div className="slot-name">{record.assignedCreativeStrategist?.name || 'Unassigned'}</div>
+              <div className="slot-name">{record.assignedCreativeStrategist?.name || 'UNASSIGNED'}</div>
             </div>
           </div>
 
@@ -562,7 +575,7 @@ export const RecordDrawer = ({
             <div className="slot-avatar">GD</div>
             <div className="slot-info">
               <div className="slot-label">Graphic Designer</div>
-              <div className="slot-name">{record.assignedGraphicDesigner?.name || 'Unassigned'}</div>
+              <div className="slot-name">{record.assignedGraphicDesigner?.name || 'UNASSIGNED'}</div>
             </div>
           </div>
 
@@ -573,23 +586,64 @@ export const RecordDrawer = ({
               <div className="slot-name">Abhishek Sir / Admin</div>
             </div>
           </div>
+
+          {isAdmin && (
+            <button
+              type="button"
+              className="team-bar-edit-btn"
+              onClick={() => setIsEditModalOpen(true)}
+              style={{
+                marginLeft: 'auto',
+                alignSelf: 'center',
+                padding: '6px 12px',
+                background: '#FFFFFF',
+                border: '1px solid #CBD5E1',
+                borderRadius: '6px',
+                fontSize: '0.78rem',
+                fontWeight: 700,
+                cursor: 'pointer',
+                color: '#000000'
+              }}
+            >
+              ✏ Edit Assignment
+            </button>
+          )}
         </div>
 
-        {/* 72-HOUR TIMER BAR */}
+        {/* OBSERVATION TIMER BAR */}
         {record.status === 'LAUNCHED' && (
           <div className="drawer-timer-bar">
             <div className="timer-indicator-pulse" />
             <div className="timer-content">
-              <span className="timer-label">72-Hour Performance Observation Active</span>
+              <span className="timer-label">
+                {durationHours === 72 ? '72-Hour' : `${durationHours}-Hour`} Performance Observation Active
+              </span>
               <span className="timer-started">
                 Report due: <strong>{formatDateTime(unlockReportTime)}</strong>
               </span>
             </div>
-            <div className="timer-elapsed">
+            <div className="timer-elapsed" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
               {isReportLocked ? (
                 <span>Unlocks in <strong>{formatDurationMs(remainingReportMs)}</strong></span>
               ) : (
                 <span style={{ color: '#166534', fontWeight: 700 }}>🔓 Report Unlocked!</span>
+              )}
+              {isAdmin && (
+                <button
+                  type="button"
+                  onClick={() => setIsEditModalOpen(true)}
+                  style={{
+                    background: '#FFFFFF',
+                    border: '1px solid #CBD5E1',
+                    borderRadius: '4px',
+                    padding: '2px 8px',
+                    fontSize: '0.72rem',
+                    fontWeight: 600,
+                    cursor: 'pointer'
+                  }}
+                >
+                  Edit Schedule
+                </button>
               )}
             </div>
           </div>
@@ -1581,6 +1635,18 @@ export const RecordDrawer = ({
           )}
         </div>
       </div>
+
+      {/* EDIT ASSIGNMENT & SCHEDULE MODAL */}
+      <EditAssignmentModal
+        isOpen={isEditModalOpen}
+        onClose={() => setIsEditModalOpen(false)}
+        record={record}
+        allUsers={allUsers}
+        onSubmit={async (recId, updateData) => {
+          await onUpdateRecord(recId, updateData);
+          await loadTimeline();
+        }}
+      />
     </div>
   );
 };
