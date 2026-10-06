@@ -14,7 +14,17 @@ export const getAllCampaigns = async () => {
   return await Campaign.find().populate('client', 'name code').sort({ createdAt: -1 });
 };
 
-export const createCampaign = async ({ name, clientId, launchDate, status, notes, userId }) => {
+export const createCampaign = async ({
+  name,
+  clientId,
+  launchDate,
+  campaignType,
+  budget,
+  objective,
+  status,
+  notes,
+  userId
+}) => {
   const client = await Client.findById(clientId);
   if (!client) {
     throw new ApiError(404, 'Client not found');
@@ -24,6 +34,9 @@ export const createCampaign = async ({ name, clientId, launchDate, status, notes
     name: name.trim(),
     client: clientId,
     launchDate: launchDate ? new Date(launchDate) : null,
+    campaignType: campaignType || 'CBO',
+    budget: budget !== undefined ? budget : null,
+    objective: objective || 'Sales',
     status: status || 'ACTIVE',
     notes: notes ? notes.trim() : '',
     createdBy: userId
@@ -43,6 +56,9 @@ export const updateCampaign = async (campaignId, updateData) => {
   if (updateData.launchDate !== undefined) {
     campaign.launchDate = updateData.launchDate ? new Date(updateData.launchDate) : null;
   }
+  if (updateData.campaignType !== undefined) campaign.campaignType = updateData.campaignType;
+  if (updateData.budget !== undefined) campaign.budget = updateData.budget;
+  if (updateData.objective !== undefined) campaign.objective = updateData.objective;
   if (updateData.status !== undefined) campaign.status = updateData.status;
   if (updateData.notes !== undefined) campaign.notes = updateData.notes.trim();
 

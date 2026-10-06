@@ -23,12 +23,17 @@ import {
   handleResumeCreative,
   handleGetCreativeDeletePreview,
   handleDeleteRecord,
-  handleStreamEvents
+  handleStreamEvents,
+  handleUnifiedCreateRecord,
+  handleGetTargetingLocations,
+  handleUploadCreativeFile,
+  handleDeleteCreativeFile
 } from '../controllers/creativeStrategy.controller.js';
 import { authGuard } from '../middleware/auth.middleware.js';
 import { requireRole } from '../middleware/role.middleware.js';
 import { validate } from '../middleware/validate.middleware.js';
 import {
+  unifiedCreateCreativeStrategySchema,
   createCreativeStrategySchema,
   updateCreativeStrategySchema,
   recordIdParamSchema,
@@ -56,6 +61,10 @@ router.use(authGuard);
 
 router.get('/', handleGetRecords);
 router.post('/', validate(createCreativeStrategySchema), handleCreateRecord);
+router.post('/unified-create', validate(unifiedCreateCreativeStrategySchema), handleUnifiedCreateRecord);
+router.get('/targeting-locations', handleGetTargetingLocations);
+router.post('/upload', handleUploadCreativeFile);
+router.delete('/upload/:fileId', handleDeleteCreativeFile);
 
 router.get('/:id', validate(recordIdParamSchema), handleGetRecordById);
 router.patch('/:id', validate(updateCreativeStrategySchema), handleUpdateRecord);

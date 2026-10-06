@@ -24,6 +24,46 @@ const adSetSchema = new mongoose.Schema(
       type: Date,
       default: null
     },
+    budget: {
+      type: Number,
+      default: null
+    },
+    ageGroup: {
+      start: {
+        type: Number,
+        default: 18
+      },
+      end: {
+        type: Number,
+        default: 65
+      }
+    },
+    gender: {
+      type: String,
+      enum: ['Male', 'Female', 'Both'],
+      default: 'Both'
+    },
+    includedLocations: {
+      type: [String],
+      default: []
+    },
+    excludedLocations: {
+      type: [String],
+      default: []
+    },
+    targeting: {
+      type: String,
+      enum: ['Broad', 'Interest'],
+      default: 'Broad'
+    },
+    interests: {
+      type: [String],
+      default: []
+    },
+    partOfCurrentCycle: {
+      type: Boolean,
+      default: true
+    },
     status: {
       type: String,
       enum: ['ACTIVE', 'PAUSED', 'COMPLETED', 'DRAFT'],

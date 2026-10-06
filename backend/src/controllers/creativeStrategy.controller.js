@@ -38,6 +38,52 @@ export const handleCreateRecord = async (req, res, next) => {
   }
 };
 
+export const handleUnifiedCreateRecord = async (req, res, next) => {
+  try {
+    const record = await creativeStrategyService.unifiedCreateCreativeStrategy(req.body, req.user);
+    res.status(201).json(new ApiResponse(201, record, 'Creative strategy hierarchy created successfully'));
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const handleGetTargetingLocations = async (req, res, next) => {
+  try {
+    const locations = await creativeStrategyService.getTargetingLocations();
+    res.status(200).json(new ApiResponse(200, locations, 'Targeting locations retrieved'));
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const handleUploadCreativeFile = async (req, res, next) => {
+  try {
+    const { image, name, mimeType } = req.body;
+    if (!image) {
+      return res.status(400).json({ success: false, message: 'Image data is required' });
+    }
+    const result = await creativeStrategyService.uploadCreativeFile({
+      fileData: image,
+      fileName: name,
+      mimeType,
+      user: req.user
+    });
+    res.status(201).json(new ApiResponse(201, result, 'Creative file uploaded'));
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const handleDeleteCreativeFile = async (req, res, next) => {
+  try {
+    const { fileId } = req.params;
+    await creativeStrategyService.deleteCreativeFile(fileId);
+    res.status(200).json(new ApiResponse(200, { fileId }, 'Creative file deleted'));
+  } catch (error) {
+    next(error);
+  }
+};
+
 export const handleUpdateRecord = async (req, res, next) => {
   try {
     const record = await creativeStrategyService.updateCreativeStrategy(

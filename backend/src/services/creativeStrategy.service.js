@@ -14,6 +14,7 @@ import {
 import { ApiError } from '../utils/ApiError.js';
 import { broadcastEvent } from './sse.service.js';
 import * as notificationService from './notification.service.js';
+import { uploadImage, deleteImage } from './imagekit.service.js';
 
 export const formatDuration = (ms) => {
   if (!ms || ms < 0) return '0m';
@@ -289,6 +290,274 @@ export const createCreativeStrategy = async (data, user) => {
   const populated = await getCreativeStrategyById(record._id);
   broadcastEvent('CREATIVE_STRATEGY_CREATED', populated);
   return populated;
+};
+
+export const unifiedCreateCreativeStrategy = async (data, user) => {
+  const {
+    clientId,
+    isNewCampaign,
+    campaignId,
+    campaignData = {},
+    isNewAdSet,
+    adSetId,
+    adSetData = {},
+    creativeData = {}
+  } = data;
+
+  const client = await Client.findById(clientId);
+  if (!client) {
+    throw new ApiError(404, 'Client not found');
+  }
+
+  let createdCampaign = null;
+  let createdAdSet = null;
+  let createdRecord = null;
+  const newUploadedFileIds = (creativeData.creatives || [])
+    .map((c) => c.fileId)
+    .filter(Boolean);
+
+  try {
+    // 1. Resolve or Create Campaign
+    let campaign = null;
+    if (isNewCampaign) {
+      if (!campaignData.name || !campaignData.name.trim()) {
+        throw new ApiError(400, 'Campaign name is required for new Campaign');
+      }
+      const cType = campaignData.campaignType || 'CBO';
+      let cBudget = null;
+      if (cType === 'CBO') {
+        if (
+          campaignData.budget === undefined ||
+          campaignData.budget === null ||
+          isNaN(Number(campaignData.budget)) ||
+          Number(campaignData.budget) < 0
+        ) {
+          throw new ApiError(400, 'Campaign Budget is required and must be non-negative for CBO Campaign');
+        }
+        cBudget = Number(campaignData.budget);
+      }
+      const cObjective = campaignData.objective || 'Sales';
+      const cLaunchDate = campaignData.launchDate ? new Date(campaignData.launchDate) : null;
+
+      createdCampaign = await Campaign.create({
+        name: campaignData.name.trim(),
+        client: client._id,
+        campaignType: cType,
+        budget: cBudget,
+        objective: cObjective,
+        launchDate: cLaunchDate,
+        status: 'ACTIVE',
+        notes: campaignData.notes?.trim() || '',
+        createdBy: user._id
+      });
+      campaign = createdCampaign;
+      broadcastEvent('CAMPAIGN_CREATED', campaign);
+    } else {
+      if (!campaignId) {
+        throw new ApiError(400, 'Existing campaign ID is required');
+      }
+      campaign = await Campaign.findById(campaignId);
+      if (!campaign) {
+        throw new ApiError(404, 'Campaign not found');
+      }
+      if (campaign.client.toString() !== client._id.toString()) {
+        throw new ApiError(400, 'Selected campaign does not belong to the chosen client');
+      }
+    }
+
+    // 2. Resolve or Create Ad Set
+    let adSet = null;
+    if (isNewAdSet) {
+      if (!adSetData.name || !adSetData.name.trim()) {
+        throw new ApiError(400, 'Ad Set name is required for new Ad Set');
+      }
+      const campaignType = campaign.campaignType || 'CBO';
+      let adSetBudget = null;
+      if (campaignType === 'ABO') {
+        if (
+          adSetData.budget === undefined ||
+          adSetData.budget === null ||
+          isNaN(Number(adSetData.budget)) ||
+          Number(adSetData.budget) < 0
+        ) {
+          throw new ApiError(400, 'Ad Set Budget is required and must be non-negative when Campaign is ABO');
+        }
+        adSetBudget = Number(adSetData.budget);
+      }
+
+      const targeting = adSetData.targeting || 'Broad';
+      if (targeting === 'Interest') {
+        if (!Array.isArray(adSetData.interests) || adSetData.interests.length === 0) {
+          throw new ApiError(400, 'At least one interest must be specified when targeting is set to Interest');
+        }
+      }
+
+      const ageStart = adSetData.ageGroup?.start !== undefined ? Number(adSetData.ageGroup.start) : 18;
+      const ageEnd = adSetData.ageGroup?.end !== undefined ? Number(adSetData.ageGroup.end) : 65;
+      if (ageStart < 13 || ageEnd > 100 || ageStart > ageEnd) {
+        throw new ApiError(400, 'Invalid age range');
+      }
+
+      const adSetLaunchDate = adSetData.launchDate
+        ? new Date(adSetData.launchDate)
+        : campaign.launchDate || null;
+
+      createdAdSet = await AdSet.create({
+        name: adSetData.name.trim(),
+        campaign: campaign._id,
+        client: client._id,
+        budget: adSetBudget,
+        ageGroup: { start: ageStart, end: ageEnd },
+        gender: adSetData.gender || 'Both',
+        includedLocations: Array.isArray(adSetData.includedLocations) ? adSetData.includedLocations : [],
+        excludedLocations: Array.isArray(adSetData.excludedLocations) ? adSetData.excludedLocations : [],
+        targeting,
+        interests: Array.isArray(adSetData.interests) ? adSetData.interests : [],
+        launchDate: adSetLaunchDate,
+        partOfCurrentCycle: adSetData.partOfCurrentCycle !== undefined ? Boolean(adSetData.partOfCurrentCycle) : true,
+        status: 'ACTIVE',
+        currentTestingCycle: 1,
+        createdBy: user._id
+      });
+      adSet = createdAdSet;
+      broadcastEvent('AD_SET_CREATED', adSet);
+    } else {
+      if (!adSetId) {
+        throw new ApiError(400, 'Existing Ad Set ID is required');
+      }
+      adSet = await AdSet.findById(adSetId);
+      if (!adSet) {
+        throw new ApiError(404, 'Ad Set not found');
+      }
+      if (adSet.campaign.toString() !== campaign._id.toString()) {
+        throw new ApiError(400, 'Selected Ad Set does not belong to the chosen Campaign');
+      }
+    }
+
+    // 3. Create Creative Strategy record
+    const adName = creativeData.adName?.trim() || creativeData.creativeName?.trim();
+    if (!adName) {
+      throw new ApiError(400, 'Ad Name is required');
+    }
+    const creativeName = adName;
+    const adType = creativeData.adType || 'Static';
+    const landingPageUrl = creativeData.landingPageUrl?.trim() || '';
+    const testingStyle = creativeData.testingStyle?.trim() || 'New Angle';
+    const creatives = Array.isArray(creativeData.creatives) ? creativeData.creatives.slice(0, 20) : [];
+    if (Array.isArray(creativeData.creatives) && creativeData.creatives.length > 20) {
+      throw new ApiError(400, 'Maximum 20 creative uploads allowed');
+    }
+
+    const cycleNum = creativeData.cycleNumber ? Number(creativeData.cycleNumber) : 1;
+    const currentTestingCycle = creativeData.currentTestingCycle || `Cycle ${cycleNum}`;
+    const observationDurationHours =
+      creativeData.observationDurationHours !== undefined && creativeData.observationDurationHours !== null
+        ? Number(creativeData.observationDurationHours)
+        : 72;
+    const schedulingMode = creativeData.schedulingMode || 'DURATION';
+
+    let launchDate = creativeData.launchDate
+      ? new Date(creativeData.launchDate)
+      : adSet.launchDate || campaign.launchDate || null;
+
+    let reportDueAt = null;
+    if (launchDate) {
+      if (schedulingMode === 'CUSTOM_DUE_DATE' && creativeData.reportDueAt) {
+        const customDue = new Date(creativeData.reportDueAt);
+        if (!isNaN(customDue.getTime())) {
+          if (customDue.getTime() <= launchDate.getTime()) {
+            throw new ApiError(400, 'Report due date and time must be after launch date and time');
+          }
+          reportDueAt = customDue;
+        }
+      } else {
+        reportDueAt = new Date(launchDate.getTime() + observationDurationHours * 3600 * 1000);
+      }
+    }
+
+    createdRecord = await CreativeStrategy.create({
+      client: client._id,
+      campaign: campaign._id,
+      adSet: adSet._id,
+      creativeName,
+      adName,
+      adType,
+      landingPageUrl,
+      testingStyle,
+      creatives,
+
+      // Snapshot hierarchy fields
+      campaignName: campaign.name,
+      campaignType: campaign.campaignType || 'CBO',
+      campaignObjective: campaign.objective || 'Sales',
+      campaignBudget: campaign.budget,
+      campaignLaunchDate: campaign.launchDate,
+
+      currentAdSetName: adSet.name,
+      adSetBudget: adSet.budget,
+      adSetAgeGroup: adSet.ageGroup,
+      adSetGender: adSet.gender,
+      adSetIncludedLocations: adSet.includedLocations,
+      adSetExcludedLocations: adSet.excludedLocations,
+      adSetTargeting: adSet.targeting,
+      adSetInterests: adSet.interests,
+      partOfCurrentCycle: adSet.partOfCurrentCycle,
+
+      launchDate,
+      reportDueAt,
+      observationDurationHours,
+      schedulingMode,
+      cycleNumber: cycleNum,
+      currentTestingCycle,
+
+      assignedMediaBuyer: creativeData.assignedMediaBuyer || null,
+      assignedCreativeStrategist: creativeData.assignedCreativeStrategist || null,
+      assignedGraphicDesigner: creativeData.assignedGraphicDesigner || null,
+      assignedTo: creativeData.assignedTo || null,
+
+      creativesProposed: creativeData.creativesProposed || creativeName,
+      hypothesis: creativeData.hypothesis || '',
+      abhishekDecision: ABHISHEK_DECISION.PENDING,
+      finalAssetConfiguration: creativeData.finalAssetConfiguration || '',
+
+      status: WORKFLOW_STATUS.PENDING_LAUNCH,
+      createdBy: user._id
+    });
+
+    await recordTimelineEvent({
+      creativeStrategyId: createdRecord._id,
+      actor: user,
+      action: TIMELINE_ACTION.RECORD_CREATED,
+      stage: 'Creation',
+      notes: `Creative strategy hierarchy unified record created for ${client.name} — Campaign: "${campaign.name}" (${campaign.campaignType || 'CBO'}) → Ad Set: "${adSet.name}" → Ad: "${creativeName}" (${adType})`
+    });
+
+    const populated = await getCreativeStrategyById(createdRecord._id);
+    broadcastEvent('CREATIVE_STRATEGY_CREATED', populated);
+    return populated;
+  } catch (err) {
+    // Transaction / Rollback orchestration:
+    // If anything fails, clean up newly created records to prevent half-created hierarchy or orphans
+    if (createdRecord?._id) {
+      await CreativeStrategyTimeline.deleteMany({ creativeStrategy: createdRecord._id }).catch(() => {});
+      await CreativeStrategy.findByIdAndDelete(createdRecord._id).catch(() => {});
+    }
+    if (createdAdSet?._id) {
+      await AdSet.findByIdAndDelete(createdAdSet._id).catch(() => {});
+      broadcastEvent('AD_SET_DELETED', { adSetId: createdAdSet._id });
+    }
+    if (createdCampaign?._id) {
+      await Campaign.findByIdAndDelete(createdCampaign._id).catch(() => {});
+      broadcastEvent('CAMPAIGN_DELETED', { campaignId: createdCampaign._id });
+    }
+    // Clean up newly uploaded files if final creation failed
+    if (newUploadedFileIds.length > 0) {
+      for (const fileId of newUploadedFileIds) {
+        await deleteImage({ fileId }).catch(() => {});
+      }
+    }
+    throw err;
+  }
 };
 
 export const updateCreativeStrategy = async (id, updateData, user) => {
@@ -693,7 +962,22 @@ export const launchCreative = async (id, { launchProof }, user) => {
 
 export const submitReport = async (
   id,
-  { ctr, cpc, cpm, roas, performanceNotes, additionalObservations, reportNotes },
+  {
+    ctr,
+    cpc,
+    cpm,
+    roas,
+    spend,
+    costPerResult,
+    purchases,
+    purchaseConversionValue,
+    performanceStatus,
+    selectedCreatives,
+    creativePerformances,
+    performanceNotes,
+    additionalObservations,
+    reportNotes
+  },
   user
 ) => {
   const record = await CreativeStrategy.findById(id).populate('client', 'name');
@@ -760,6 +1044,58 @@ export const submitReport = async (
   if (cpc !== undefined && cpc !== null && !isNaN(cpc)) record.cpc = Number(cpc);
   if (cpm !== undefined && cpm !== null && !isNaN(cpm)) record.cpm = Number(cpm);
   if (roas !== undefined && roas !== null && !isNaN(roas)) record.roas = Number(roas);
+  if (spend !== undefined && spend !== null && !isNaN(spend)) record.spend = Number(spend);
+  if (costPerResult !== undefined && costPerResult !== null && !isNaN(costPerResult)) {
+    record.costPerResult = Number(costPerResult);
+  }
+  if (purchases !== undefined && purchases !== null && !isNaN(purchases)) {
+    record.purchases = Number(purchases);
+  }
+  if (purchaseConversionValue !== undefined && purchaseConversionValue !== null && !isNaN(purchaseConversionValue)) {
+    record.purchaseConversionValue = Number(purchaseConversionValue);
+  }
+  if (performanceStatus) {
+    record.performanceStatus = performanceStatus;
+  }
+  if (Array.isArray(selectedCreatives)) {
+    record.selectedCreatives = selectedCreatives;
+  }
+  if (Array.isArray(creativePerformances) && creativePerformances.length > 0) {
+    record.creativePerformances = creativePerformances.map((cp) => ({
+      creativeId: cp.creativeId || '',
+      creativeName: cp.creativeName || '',
+      previewUrl: cp.previewUrl || '',
+      spend: Number(cp.spend) || 0,
+      costPerResult: Number(cp.costPerResult) || 0,
+      purchases: Number(cp.purchases) || 0,
+      purchaseConversionValue: Number(cp.purchaseConversionValue) || 0,
+      roas: Number(cp.roas) || 0,
+      performanceStatus: cp.performanceStatus === 'LOSER' ? 'LOSER' : 'WINNER'
+    }));
+
+    // If overall spend or roas wasn't passed directly, aggregate from creativePerformances
+    if (spend === undefined || spend === null) {
+      record.spend = record.creativePerformances.reduce((acc, c) => acc + (c.spend || 0), 0);
+    }
+    if (purchases === undefined || purchases === null) {
+      record.purchases = record.creativePerformances.reduce((acc, c) => acc + (c.purchases || 0), 0);
+    }
+    if (purchaseConversionValue === undefined || purchaseConversionValue === null) {
+      record.purchaseConversionValue = record.creativePerformances.reduce(
+        (acc, c) => acc + (c.purchaseConversionValue || 0),
+        0
+      );
+    }
+    if (roas === undefined || roas === null) {
+      if (record.spend > 0 && record.purchaseConversionValue > 0) {
+        record.roas = Number((record.purchaseConversionValue / record.spend).toFixed(2));
+      }
+    }
+    if (!performanceStatus) {
+      const hasWinner = record.creativePerformances.some((cp) => cp.performanceStatus === 'WINNER');
+      record.performanceStatus = hasWinner ? 'WINNER' : 'LOSER';
+    }
+  }
 
   const notesCombined = performanceNotes || reportNotes || '';
   record.performanceNotes = notesCombined.trim();
@@ -771,6 +1107,11 @@ export const submitReport = async (
   await record.save();
 
   const durationMs = now.getTime() - new Date(record.launchedAt).getTime();
+  const winnersCount = (record.creativePerformances || []).filter((cp) => cp.performanceStatus === 'WINNER').length;
+  const losersCount = (record.creativePerformances || []).filter((cp) => cp.performanceStatus === 'LOSER').length;
+  const perfSummary = record.creativePerformances?.length
+    ? ` (${winnersCount} Winner(s), ${losersCount} Loser(s), Total Spend: ${record.spend ?? 0}, ROAS: ${record.roas ?? 0}x)`
+    : '';
 
   await recordTimelineEvent({
     creativeStrategyId: record._id,
@@ -778,7 +1119,7 @@ export const submitReport = async (
     action: TIMELINE_ACTION.REPORT_SUBMITTED,
     stage: 'Performance Report',
     durationMs,
-    notes: `Performance Report submitted by ${user.name} (CTR: ${record.ctr ?? 'N/A'}, CPC: ${record.cpc ?? 'N/A'}, CPM: ${record.cpm ?? 'N/A'}, ROAS: ${record.roas ?? 'N/A'}). Time taken: ${formatDuration(durationMs)}`
+    notes: `Performance Report submitted by ${user.name} (CTR: ${record.ctr ?? 'N/A'}, ROAS: ${record.roas ?? 'N/A'}, Status: ${record.performanceStatus || 'N/A'})${perfSummary}. Time taken: ${formatDuration(durationMs)}`
   });
 
   // Notify assigned Creative Strategist
@@ -1773,3 +2114,46 @@ export const deleteCreativeStrategy = async (id) => {
   broadcastEvent('CREATIVE_STRATEGY_DELETED', { id });
   return { deletedId: id };
 };
+
+export const getTargetingLocations = async () => {
+  const adSets = await AdSet.find().select('includedLocations excludedLocations');
+  const locationSet = new Set([
+    'India',
+    'United States',
+    'United Kingdom',
+    'Canada',
+    'Australia',
+    'United Arab Emirates',
+    'Singapore',
+    'Delhi NCR',
+    'Mumbai',
+    'Bengaluru',
+    'Hyderabad',
+    'Chennai',
+    'Kolkata',
+    'Pune',
+    'Ahmedabad',
+    'Tier 1 Cities',
+    'Tier 2 Cities'
+  ]);
+  adSets.forEach((a) => {
+    (a.includedLocations || []).forEach((loc) => loc && locationSet.add(loc.trim()));
+    (a.excludedLocations || []).forEach((loc) => loc && locationSet.add(loc.trim()));
+  });
+  return Array.from(locationSet).filter(Boolean).sort();
+};
+
+export const uploadCreativeFile = async ({ fileData, fileName, mimeType }) => {
+  const uploadResult = await uploadImage({
+    base64Data: fileData,
+    fileName: fileName || `creative-${Date.now()}.png`,
+    type: 'after',
+    mimeType: mimeType || 'image/png'
+  });
+  return uploadResult;
+};
+
+export const deleteCreativeFile = async (fileId) => {
+  return await deleteImage({ fileId });
+};
+

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useAuth } from '../../../context/AuthContext';
 import {
   getTimeline,
@@ -73,6 +73,10 @@ export const RecordDrawer = ({
   const [performanceNotesInput, setPerformanceNotesInput] = useState('');
   const [additionalObservationsInput, setAdditionalObservationsInput] = useState('');
 
+  // Performance Report — Selected Creatives & Individual Metrics
+  const [selectedWorkedCreatives, setSelectedWorkedCreatives] = useState([]);
+  const [creativeMetricsMap, setCreativeMetricsMap] = useState({});
+
   // Performance Analysis Form
   const [performanceAnalysisInput, setPerformanceAnalysisInput] = useState('');
   const [recommendationInput, setRecommendationInput] = useState('');
@@ -135,6 +139,36 @@ export const RecordDrawer = ({
       setPerformanceNotesInput(record.performanceNotes || record.reportNotes || '');
       setAdditionalObservationsInput(record.additionalObservations || '');
 
+      // Load selected creatives and individual performances
+      if (Array.isArray(record.selectedCreatives) && record.selectedCreatives.length > 0) {
+        setSelectedWorkedCreatives(record.selectedCreatives);
+      } else if (Array.isArray(record.creativePerformances) && record.creativePerformances.length > 0) {
+        setSelectedWorkedCreatives(record.creativePerformances.map((cp) => cp.creativeId).filter(Boolean));
+      } else {
+        setSelectedWorkedCreatives([]);
+      }
+
+      if (Array.isArray(record.creativePerformances) && record.creativePerformances.length > 0) {
+        const map = {};
+        record.creativePerformances.forEach((cp) => {
+          const key = cp.creativeId || cp.creativeName;
+          map[key] = {
+            spend: cp.spend !== undefined && cp.spend !== null ? String(cp.spend) : '',
+            costPerResult: cp.costPerResult !== undefined && cp.costPerResult !== null ? String(cp.costPerResult) : '',
+            purchases: cp.purchases !== undefined && cp.purchases !== null ? String(cp.purchases) : '',
+            purchaseConversionValue:
+              cp.purchaseConversionValue !== undefined && cp.purchaseConversionValue !== null
+                ? String(cp.purchaseConversionValue)
+                : '',
+            roas: cp.roas !== undefined && cp.roas !== null ? String(cp.roas) : '',
+            performanceStatus: cp.performanceStatus || 'WINNER'
+          };
+        });
+        setCreativeMetricsMap(map);
+      } else {
+        setCreativeMetricsMap({});
+      }
+
       setPerformanceAnalysisInput(record.performanceAnalysis || '');
       setRecommendationInput(record.recommendation || '');
       setAnalysisNotesInput(record.analysisNotes || '');
@@ -167,8 +201,29 @@ export const RecordDrawer = ({
     }
   }, [isOpen, record?._id, record?.status]);
 
+  const cycleCreatives = useMemo(() => {
+    if (!record) return [];
+    if (record.creatives && record.creatives.length > 0) {
+      return record.creatives.map((c, idx) => ({
+        id: c.fileId || `creative-${idx}`,
+        name: c.name || `Creative #${idx + 1}`,
+        url: c.url,
+        mimeType: c.mimeType
+      }));
+    }
+    return [
+      {
+        id: 'primary-creative',
+        name: record?.adName || record?.creativeName || 'Primary Creative',
+        url: record?.creativeAttachment || '',
+        mimeType: 'image/png'
+      }
+    ];
+  }, [record]);
+
   const loadTimeline = async () => {
     try {
+      if (!record?._id) return;
       setLoadingTimeline(true);
       const data = await getTimeline(record._id);
       setTimeline(data || []);
@@ -239,15 +294,107 @@ export const RecordDrawer = ({
     }
   };
 
+  const handleToggleWorkedCreative = (creativeId) => {
+    if (selectedWorkedCreatives.includes(creativeId)) {
+      setSelectedWorkedCreatives(selectedWorkedCreatives.filter((id) => id !== creativeId));
+    } else {
+      setSelectedWorkedCreatives([...selectedWorkedCreatives, creativeId]);
+      if (!creativeMetricsMap[creativeId]) {
+        setCreativeMetricsMap((prev) => ({
+          ...prev,
+          [creativeId]: {
+            spend: '',
+            costPerResult: '',
+            purchases: '',
+            purchaseConversionValue: '',
+            roas: '',
+            performanceStatus: 'WINNER'
+          }
+        }));
+      }
+    }
+  };
+
+  const handleUpdateCreativeMetric = (creativeId, field, value) => {
+    setCreativeMetricsMap((prev) => ({
+      ...prev,
+      [creativeId]: {
+        ...(prev[creativeId] || { performanceStatus: 'WINNER' }),
+        [field]: value
+      }
+    }));
+  };
+
   const handleSubmitPerformanceReport = async () => {
     try {
       setIsProcessing(true);
       setActionError('');
+
+      if (selectedWorkedCreatives.length === 0) {
+        setActionError('Please select at least one creative that worked for this testing cycle.');
+        setIsProcessing(false);
+        return;
+      }
+
+      const perfArray = [];
+      for (const cId of selectedWorkedCreatives) {
+        const metrics = creativeMetricsMap[cId] || {};
+        const cObj = cycleCreatives.find((c) => c.id === cId);
+        const spendNum = Number(metrics.spend);
+        const cprNum = Number(metrics.costPerResult);
+        const purchasesNum = Number(metrics.purchases);
+        const pValNum = Number(metrics.purchaseConversionValue);
+        const roasNum = Number(metrics.roas);
+
+        if (isNaN(spendNum) || spendNum < 0) {
+          setActionError(`Spend for "${cObj?.name || 'creative'}" must be a non-negative number.`);
+          setIsProcessing(false);
+          return;
+        }
+        if (isNaN(purchasesNum) || purchasesNum < 0) {
+          setActionError(`Purchases for "${cObj?.name || 'creative'}" must be a non-negative number.`);
+          setIsProcessing(false);
+          return;
+        }
+        if (isNaN(pValNum) || pValNum < 0) {
+          setActionError(`Purchase Conversion Value for "${cObj?.name || 'creative'}" must be a non-negative number.`);
+          setIsProcessing(false);
+          return;
+        }
+        if (isNaN(roasNum) || roasNum < 0) {
+          setActionError(`ROAS for "${cObj?.name || 'creative'}" must be a non-negative number.`);
+          setIsProcessing(false);
+          return;
+        }
+
+        perfArray.push({
+          creativeId: cId,
+          creativeName: cObj?.name || 'Creative',
+          previewUrl: cObj?.url || '',
+          spend: spendNum,
+          costPerResult: isNaN(cprNum) ? 0 : cprNum,
+          purchases: purchasesNum,
+          purchaseConversionValue: pValNum,
+          roas: roasNum,
+          performanceStatus: metrics.performanceStatus === 'LOSER' ? 'LOSER' : 'WINNER'
+        });
+      }
+
+      const totalSpend = perfArray.reduce((acc, c) => acc + c.spend, 0);
+      const totalPurchases = perfArray.reduce((acc, c) => acc + c.purchases, 0);
+      const totalVal = perfArray.reduce((acc, c) => acc + c.purchaseConversionValue, 0);
+      const calcRoas = totalSpend > 0 ? Number((totalVal / totalSpend).toFixed(2)) : perfArray[0]?.roas || 0;
+
       const updated = await submitReport(record._id, {
         ctr: ctrInput ? Number(ctrInput) : null,
         cpc: cpcInput ? Number(cpcInput) : null,
         cpm: cpmInput ? Number(cpmInput) : null,
-        roas: roasInput ? Number(roasInput) : null,
+        roas: roasInput ? Number(roasInput) : calcRoas,
+        spend: totalSpend,
+        purchases: totalPurchases,
+        purchaseConversionValue: totalVal,
+        selectedCreatives: selectedWorkedCreatives,
+        creativePerformances: perfArray,
         performanceNotes: performanceNotesInput,
         additionalObservations: additionalObservationsInput
       });
@@ -459,41 +606,42 @@ export const RecordDrawer = ({
   return (
     <div className="record-drawer-overlay" onClick={onClose}>
       <div className="record-drawer-container" onClick={(e) => e.stopPropagation()}>
-        {/* TOP HEADER */}
+        {/* 1. TOP HEADER */}
         <header className="drawer-top-header">
           <div className="header-left">
             <div className="hierarchy-breadcrumb">
-              <span className="crumb-client">{record.client?.code || record.client?.name}</span>
+              <span className="crumb-client">{record.client?.name || record.client?.code}</span>
               <span className="crumb-sep">/</span>
               <span>{record.campaignName || 'Campaign'}</span>
               <span className="crumb-sep">/</span>
               <span>{record.currentAdSetName || 'Ad Set'}</span>
             </div>
-            <h2 className="record-title">
-              {record.creativeName || record.creativesProposed || 'Creative'}
-              <span style={{ fontSize: '0.85rem', fontWeight: 600, color: '#5A5B52' }}>
-                ({record.currentTestingCycle})
+            <div className="record-title-row">
+              <h2 className="record-title">
+                {record.creativeName || record.creativesProposed || 'Creative'}
+              </h2>
+              <span className="cycle-badge">
+                {record.currentTestingCycle || `Cycle ${record.cycleNumber || 1}`}
               </span>
-            </h2>
-            <div className="record-badges">
+            </div>
+            <div className="record-sub-meta">
               <StatusBadge status={record.status} record={record} />
               {record.finalApprovalStatus === 'APPROVED' && (
                 <span className="status-badge status-success">FINAL APPROVED</span>
               )}
               {record.launchedAt && (
-                <span className="status-badge status-default">
+                <span className="meta-pill">
                   Launched {formatDate(record.launchedAt)}
                 </span>
               )}
               {isAdmin && (
-                <Button
-                  variant="secondary"
-                  size="sm"
+                <button
+                  type="button"
+                  className="btn-edit-header"
                   onClick={() => setIsEditModalOpen(true)}
-                  style={{ marginLeft: '6px' }}
                 >
-                  ✏ Edit Assignment & Schedule
-                </Button>
+                  Edit Assignment & Schedule
+                </button>
               )}
             </div>
           </div>
@@ -504,27 +652,15 @@ export const RecordDrawer = ({
 
         {/* CYCLE SWITCHER (If multiple cycles exist) */}
         {relatedCycleRecords.length > 1 && (
-          <div style={{ background: '#F4F4EE', padding: '6px 24px', borderBottom: '1px solid #E5E5DC', display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <span style={{ fontSize: '0.72rem', fontWeight: 700, textTransform: 'uppercase', color: '#5A5B52' }}>
-              Cycle History:
-            </span>
-            <div style={{ display: 'flex', gap: '6px', overflowX: 'auto' }}>
+          <div className="drawer-cycle-history-bar">
+            <span className="cycle-history-label">Cycle History:</span>
+            <div className="cycle-history-chips">
               {relatedCycleRecords.map((c) => (
                 <button
                   key={c._id}
                   type="button"
+                  className={`cycle-chip ${c._id === record._id ? 'active' : ''}`}
                   onClick={() => onSelectRecord && onSelectRecord(c)}
-                  style={{
-                    padding: '3px 8px',
-                    borderRadius: '6px',
-                    border: '1px solid',
-                    borderColor: c._id === record._id ? '#000000' : '#E5E5DC',
-                    background: c._id === record._id ? '#F2EA1A' : '#FFFFFF',
-                    color: '#000000',
-                    fontSize: '0.75rem',
-                    fontWeight: c._id === record._id ? 700 : 500,
-                    cursor: 'pointer'
-                  }}
                 >
                   {c.currentTestingCycle || `Cycle ${c.cycleNumber}`}
                 </button>
@@ -533,7 +669,7 @@ export const RecordDrawer = ({
           </div>
         )}
 
-        {/* 12-STAGE HORIZONTAL STEPPER */}
+        {/* 2. WORKFLOW STEPPER */}
         <div className="workspace-stepper-wrap">
           <div className="stepper-track">
             {STAGES.map((step, idx) => {
@@ -544,7 +680,7 @@ export const RecordDrawer = ({
                   key={step.id}
                   className={`step-node ${isCurrent ? 'active' : ''} ${isPast ? 'completed' : ''}`}
                 >
-                  <div className="step-circle">{isPast ? '✓' : step.id}</div>
+                  <div className="step-circle">{isPast ? '✓' : isCurrent ? '●' : step.id}</div>
                   <span className="step-text">{step.label}</span>
                   {idx < STAGES.length - 1 && <span className="step-line" />}
                 </div>
@@ -553,109 +689,92 @@ export const RecordDrawer = ({
           </div>
         </div>
 
-        {/* ASSIGNED TEAM BAR */}
-        <div className="assigned-team-bar">
-          <div className="team-role-slot">
-            <div className="slot-avatar">MB</div>
-            <div className="slot-info">
-              <div className="slot-label">Media Buyer</div>
-              <div className="slot-name">{record.assignedMediaBuyer?.name || 'UNASSIGNED'}</div>
+        {/* 3. ASSIGNMENT SECTION */}
+        <div className="drawer-assignment-section">
+          <div className="assignment-header-row">
+            <span className="section-title-label">ASSIGNMENT</span>
+            {isAdmin && (
+              <button
+                type="button"
+                className="btn-edit-assignment"
+                onClick={() => setIsEditModalOpen(true)}
+              >
+                Edit Assignment
+              </button>
+            )}
+          </div>
+          <div className="assignment-grid">
+            <div className="assignment-row">
+              <span className="role-label">Media Buyer</span>
+              <span className={`user-pill ${!record.assignedMediaBuyer?.name ? 'unassigned' : ''}`}>
+                {record.assignedMediaBuyer?.name || 'Unassigned'}
+              </span>
+            </div>
+            <div className="assignment-row">
+              <span className="role-label">Creative Strategist</span>
+              <span className={`user-pill ${!record.assignedCreativeStrategist?.name ? 'unassigned' : ''}`}>
+                {record.assignedCreativeStrategist?.name || 'Unassigned'}
+              </span>
+            </div>
+            <div className="assignment-row">
+              <span className="role-label">Graphic Designer</span>
+              <span className={`user-pill ${!record.assignedGraphicDesigner?.name ? 'unassigned' : ''}`}>
+                {record.assignedGraphicDesigner?.name || 'Unassigned'}
+              </span>
+            </div>
+            <div className="assignment-row">
+              <span className="role-label">Final Approver</span>
+              <span className="user-pill approver">
+                Abhishek Sir / Admin
+              </span>
             </div>
           </div>
-
-          <div className="team-role-slot">
-            <div className="slot-avatar">CS</div>
-            <div className="slot-info">
-              <div className="slot-label">Creative Strategist</div>
-              <div className="slot-name">{record.assignedCreativeStrategist?.name || 'UNASSIGNED'}</div>
-            </div>
-          </div>
-
-          <div className="team-role-slot">
-            <div className="slot-avatar">GD</div>
-            <div className="slot-info">
-              <div className="slot-label">Graphic Designer</div>
-              <div className="slot-name">{record.assignedGraphicDesigner?.name || 'UNASSIGNED'}</div>
-            </div>
-          </div>
-
-          <div className="team-role-slot">
-            <div className="slot-avatar">FA</div>
-            <div className="slot-info">
-              <div className="slot-label">Final Approver</div>
-              <div className="slot-name">Abhishek Sir / Admin</div>
-            </div>
-          </div>
-
-          {isAdmin && (
-            <button
-              type="button"
-              className="team-bar-edit-btn"
-              onClick={() => setIsEditModalOpen(true)}
-              style={{
-                marginLeft: 'auto',
-                alignSelf: 'center',
-                padding: '6px 12px',
-                background: '#FFFFFF',
-                border: '1px solid #CBD5E1',
-                borderRadius: '6px',
-                fontSize: '0.78rem',
-                fontWeight: 700,
-                cursor: 'pointer',
-                color: '#000000'
-              }}
-            >
-              ✏ Edit Assignment
-            </button>
-          )}
         </div>
 
-        {/* OBSERVATION TIMER BAR */}
+        {/* 4. 72-HOUR OBSERVATION BAR */}
         {record.status === 'LAUNCHED' && (
-          <div className="drawer-timer-bar">
-            <div className="timer-indicator-pulse" />
-            <div className="timer-content">
-              <span className="timer-label">
-                {durationHours === 72 ? '72-Hour' : `${durationHours}-Hour`} Performance Observation Active
+          <div className="drawer-observation-bar">
+            <div className="observation-title-row">
+              <span className="status-dot">●</span>
+              <span className="title-text">
+                {durationHours === 72 ? '72-HOUR OBSERVATION ACTIVE' : `${durationHours}-HOUR OBSERVATION ACTIVE`}
               </span>
-              <span className="timer-started">
-                Report due: <strong>{formatDateTime(unlockReportTime)}</strong>
-              </span>
-            </div>
-            <div className="timer-elapsed" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              {isReportLocked ? (
-                <span>Unlocks in <strong>{formatDurationMs(remainingReportMs)}</strong></span>
-              ) : (
-                <span style={{ color: '#166534', fontWeight: 700 }}>🔓 Report Unlocked!</span>
-              )}
               {isAdmin && (
                 <button
                   type="button"
+                  className="btn-edit-schedule"
                   onClick={() => setIsEditModalOpen(true)}
-                  style={{
-                    background: '#FFFFFF',
-                    border: '1px solid #CBD5E1',
-                    borderRadius: '4px',
-                    padding: '2px 8px',
-                    fontSize: '0.72rem',
-                    fontWeight: 600,
-                    cursor: 'pointer'
-                  }}
                 >
                   Edit Schedule
                 </button>
               )}
             </div>
+            <div className="observation-columns">
+              <div className="obs-col">
+                <span className="col-label">STATUS</span>
+                <span className="col-val">{durationHours}H Observation</span>
+              </div>
+              <div className="obs-col">
+                <span className="col-label">REPORT DUE</span>
+                <span className="col-val">{formatDateTime(unlockReportTime)}</span>
+              </div>
+              <div className="obs-col">
+                <span className="col-label">TIME REMAINING</span>
+                <span className="col-val highlight">
+                  {isReportLocked ? formatDurationMs(remainingReportMs) : 'Unlocked'}
+                </span>
+              </div>
+            </div>
           </div>
         )}
 
-        {/* WORKSPACE NAVIGATION TABS */}
+        {/* 5. WORKSPACE NAVIGATION TABS */}
         <nav className="drawer-nav-tabs">
           <button
             className={`drawer-tab-btn ${activeTab === 'workflow' ? 'active' : ''}`}
             onClick={() => setActiveTab('workflow')}
           >
-            Operational Workspace
+            Operational
           </button>
           <button
             className={`drawer-tab-btn ${activeTab === 'overview' ? 'active' : ''}`}
@@ -684,13 +803,17 @@ export const RecordDrawer = ({
             <div>
               {/* ADMIN ROLE NOTICE */}
               {isAdmin && (
-                <div className="info-alert-box" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <div>
-                    <strong>Admin Workspace Notice:</strong> You manage assignments, clients, campaigns and cycle controls. Operational actions belong to assigned team members.
-                  </div>
-                  <Button variant="ghost" size="sm" onClick={handleTogglePause}>
-                    {record.status === 'PAUSED' ? '▶ Resume Creative' : '⏸ Pause Creative'}
-                  </Button>
+                <div className="admin-info-strip">
+                  <span className="admin-info-text">
+                    Admin controls assignments, schedules and cycle management. Operational actions belong to assigned team members.
+                  </span>
+                  <button
+                    type="button"
+                    className="btn-pause-creative"
+                    onClick={handleTogglePause}
+                  >
+                    {record.status === 'PAUSED' ? 'Resume Creative' : 'Pause Creative'}
+                  </button>
                 </div>
               )}
 
@@ -734,29 +857,221 @@ export const RecordDrawer = ({
               {record.status === 'LAUNCHED' && (
                 <div className="operational-action-card">
                   <div className="action-card-header">
-                    <h3 className="card-title">Stage 2: 72-Hour Performance Report</h3>
+                    <div>
+                      <div className="stage-meta-label">STAGE 2</div>
+                      <h3 className="card-title">72-HOUR PERFORMANCE REPORT</h3>
+                    </div>
                     <span className="card-role-tag">Media Buyer</span>
                   </div>
 
                   {isReportLocked ? (
-                    <div className="info-alert-box">
-                      🔒 <strong>Report Locked (72-Hour Observation Rule)</strong>
-                      <p style={{ margin: '6px 0 0' }}>
-                        The performance report becomes available automatically after exactly 72 hours of live campaign delivery.
+                    <div className="report-locked-clean-block">
+                      <div className="locked-status-pill">Report locked</div>
+                      <p className="locked-desc-text">
+                        The performance report unlocks automatically after the configured observation period ({durationHours} hours).
                       </p>
-                      <div style={{ marginTop: '8px', fontWeight: 700 }}>
-                        Time remaining: {formatDurationMs(remainingReportMs)}
+                      <div className="locked-countdown-row">
+                        <span className="locked-label">Time remaining:</span>
+                        <span className="locked-time-val">{formatDurationMs(remainingReportMs)}</span>
                       </div>
                     </div>
                   ) : (
                     <div>
-                      <div className="success-alert-box">
-                        🔓 <strong>72 Hours Completed!</strong> Performance report is ready for submission.
+                      <div className="success-alert-box" style={{ marginBottom: '16px' }}>
+                        🔓 <strong>Observation Period Completed!</strong> Performance report is ready for submission.
                       </div>
 
+                      {/* 1. SELECT CREATIVE THAT WORKED */}
+                      <div style={{ marginBottom: '18px' }}>
+                        <div style={{ fontSize: '0.82rem', fontWeight: 700, color: '#1A1A1A', textTransform: 'uppercase', marginBottom: '6px' }}>
+                          Select Creative(s) That Worked *
+                        </div>
+                        <p style={{ fontSize: '0.78rem', color: '#5A5B52', margin: '0 0 10px 0' }}>
+                          Choose one or more creatives from this testing cycle that showed traction, and enter individual performance metrics.
+                        </p>
+
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: '10px' }}>
+                          {cycleCreatives.map((c) => {
+                            const isSelected = selectedWorkedCreatives.includes(c.id);
+                            return (
+                              <div
+                                key={c.id}
+                                onClick={() => isAssignedMB && handleToggleWorkedCreative(c.id)}
+                                style={{
+                                  border: isSelected ? '2px solid #000000' : '1px solid #CBD5E1',
+                                  background: isSelected ? '#FFFDE6' : '#FFFFFF',
+                                  borderRadius: '8px',
+                                  padding: '10px',
+                                  cursor: isAssignedMB ? 'pointer' : 'default',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  gap: '10px',
+                                  transition: 'all 0.15s ease'
+                                }}
+                              >
+                                <input
+                                  type="checkbox"
+                                  checked={isSelected}
+                                  onChange={() => {}} // handled by parent onClick
+                                  disabled={!isAssignedMB}
+                                  style={{ width: '16px', height: '16px', cursor: 'pointer' }}
+                                />
+
+                                <div style={{ width: '42px', height: '42px', borderRadius: '4px', overflow: 'hidden', background: '#F1F5F9', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                  {c.url ? (
+                                    <img src={c.url} alt={c.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                  ) : (
+                                    <span>🎨</span>
+                                  )}
+                                </div>
+
+                                <div style={{ minWidth: 0, flex: 1 }}>
+                                  <div style={{ fontSize: '0.8rem', fontWeight: 600, color: '#1A1A1A', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                    {c.name}
+                                  </div>
+                                  <div style={{ fontSize: '0.7rem', color: isSelected ? '#854D0E' : '#64748B' }}>
+                                    {isSelected ? '✓ Selected' : 'Click to select'}
+                                  </div>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+
+                      {/* 2. PERFORMANCE METRICS FOR EACH SELECTED CREATIVE */}
+                      {selectedWorkedCreatives.length > 0 && (
+                        <div style={{ marginBottom: '18px' }}>
+                          <div style={{ fontSize: '0.82rem', fontWeight: 700, color: '#1A1A1A', textTransform: 'uppercase', marginBottom: '8px' }}>
+                            Individual Creative Performance Metrics
+                          </div>
+
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                            {selectedWorkedCreatives.map((cId) => {
+                              const cObj = cycleCreatives.find((c) => c.id === cId);
+                              const metrics = creativeMetricsMap[cId] || {};
+                              return (
+                                <div
+                                  key={cId}
+                                  style={{
+                                    border: '1px solid #E5E5DC',
+                                    borderRadius: '8px',
+                                    padding: '12px 14px',
+                                    background: '#FAFAF7'
+                                  }}
+                                >
+                                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+                                    <strong style={{ fontSize: '0.85rem', color: '#1A1A1A' }}>
+                                      {cObj?.name || 'Creative'}
+                                    </strong>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                      <label style={{ fontSize: '0.75rem', fontWeight: 600, color: '#5A5B52' }}>Status:</label>
+                                      <select
+                                        value={metrics.performanceStatus || 'WINNER'}
+                                        onChange={(e) => handleUpdateCreativeMetric(cId, 'performanceStatus', e.target.value)}
+                                        disabled={!isAssignedMB}
+                                        style={{
+                                          padding: '4px 8px',
+                                          borderRadius: '4px',
+                                          border: '1px solid #CBD5E1',
+                                          fontWeight: 700,
+                                          fontSize: '0.78rem',
+                                          background: metrics.performanceStatus === 'LOSER' ? '#FEE2E2' : '#DCFCE7',
+                                          color: metrics.performanceStatus === 'LOSER' ? '#991B1B' : '#15803D'
+                                        }}
+                                      >
+                                        <option value="WINNER">Winner</option>
+                                        <option value="LOSER">Loser</option>
+                                      </select>
+                                    </div>
+                                  </div>
+
+                                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '10px' }}>
+                                    <div>
+                                      <label style={{ display: 'block', fontSize: '0.72rem', fontWeight: 600, color: '#5A5B52', marginBottom: '2px' }}>Amount Spend (₹/$) *</label>
+                                      <input
+                                        type="number"
+                                        min="0"
+                                        step="0.01"
+                                        placeholder="e.g. 5000"
+                                        value={metrics.spend || ''}
+                                        onChange={(e) => handleUpdateCreativeMetric(cId, 'spend', e.target.value)}
+                                        disabled={!isAssignedMB}
+                                        style={{ width: '100%', padding: '6px', border: '1px solid #CBD5E1', borderRadius: '4px', fontSize: '0.8rem', background: '#FFFFFF' }}
+                                        required
+                                      />
+                                    </div>
+
+                                    <div>
+                                      <label style={{ display: 'block', fontSize: '0.72rem', fontWeight: 600, color: '#5A5B52', marginBottom: '2px' }}>Cost Per Result (CPR)</label>
+                                      <input
+                                        type="number"
+                                        min="0"
+                                        step="0.01"
+                                        placeholder="e.g. 250"
+                                        value={metrics.costPerResult || ''}
+                                        onChange={(e) => handleUpdateCreativeMetric(cId, 'costPerResult', e.target.value)}
+                                        disabled={!isAssignedMB}
+                                        style={{ width: '100%', padding: '6px', border: '1px solid #CBD5E1', borderRadius: '4px', fontSize: '0.8rem', background: '#FFFFFF' }}
+                                      />
+                                    </div>
+
+                                    <div>
+                                      <label style={{ display: 'block', fontSize: '0.72rem', fontWeight: 600, color: '#5A5B52', marginBottom: '2px' }}>Purchases *</label>
+                                      <input
+                                        type="number"
+                                        min="0"
+                                        step="1"
+                                        placeholder="e.g. 20"
+                                        value={metrics.purchases || ''}
+                                        onChange={(e) => handleUpdateCreativeMetric(cId, 'purchases', e.target.value)}
+                                        disabled={!isAssignedMB}
+                                        style={{ width: '100%', padding: '6px', border: '1px solid #CBD5E1', borderRadius: '4px', fontSize: '0.8rem', background: '#FFFFFF' }}
+                                        required
+                                      />
+                                    </div>
+
+                                    <div>
+                                      <label style={{ display: 'block', fontSize: '0.72rem', fontWeight: 600, color: '#5A5B52', marginBottom: '2px' }}>Purchase Value (₹/$) *</label>
+                                      <input
+                                        type="number"
+                                        min="0"
+                                        step="0.01"
+                                        placeholder="e.g. 50000"
+                                        value={metrics.purchaseConversionValue || ''}
+                                        onChange={(e) => handleUpdateCreativeMetric(cId, 'purchaseConversionValue', e.target.value)}
+                                        disabled={!isAssignedMB}
+                                        style={{ width: '100%', padding: '6px', border: '1px solid #CBD5E1', borderRadius: '4px', fontSize: '0.8rem', background: '#FFFFFF' }}
+                                        required
+                                      />
+                                    </div>
+
+                                    <div>
+                                      <label style={{ display: 'block', fontSize: '0.72rem', fontWeight: 600, color: '#5A5B52', marginBottom: '2px' }}>ROAS (x) *</label>
+                                      <input
+                                        type="number"
+                                        min="0"
+                                        step="0.01"
+                                        placeholder="e.g. 10.0"
+                                        value={metrics.roas || ''}
+                                        onChange={(e) => handleUpdateCreativeMetric(cId, 'roas', e.target.value)}
+                                        disabled={!isAssignedMB}
+                                        style={{ width: '100%', padding: '6px', border: '1px solid #CBD5E1', borderRadius: '4px', fontSize: '0.8rem', background: '#FFFFFF' }}
+                                        required
+                                      />
+                                    </div>
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* 3. OPTIONAL OVERALL BENCHMARKS & NOTES */}
                       <div className="fields-grid-2">
                         <div className="field-group">
-                          <label>CTR (%) *</label>
+                          <label>CTR (%)</label>
                           <input
                             type="number"
                             step="0.01"
@@ -767,7 +1082,7 @@ export const RecordDrawer = ({
                           />
                         </div>
                         <div className="field-group">
-                          <label>CPC ($/₹) *</label>
+                          <label>CPC ($/₹)</label>
                           <input
                             type="number"
                             step="0.01"
@@ -778,7 +1093,7 @@ export const RecordDrawer = ({
                           />
                         </div>
                         <div className="field-group">
-                          <label>CPM ($/₹) *</label>
+                          <label>CPM ($/₹)</label>
                           <input
                             type="number"
                             step="0.01"
@@ -789,13 +1104,13 @@ export const RecordDrawer = ({
                           />
                         </div>
                         <div className="field-group">
-                          <label>ROAS (x) *</label>
+                          <label>Overall Campaign ROAS (x)</label>
                           <input
                             type="number"
                             step="0.01"
                             value={roasInput}
                             onChange={(e) => setRoasInput(e.target.value)}
-                            placeholder="e.g. 3.20"
+                            placeholder="Auto-calculated if blank"
                             disabled={!isAssignedMB}
                           />
                         </div>
@@ -807,7 +1122,7 @@ export const RecordDrawer = ({
                           rows={3}
                           value={performanceNotesInput}
                           onChange={(e) => setPerformanceNotesInput(e.target.value)}
-                          placeholder="Summary of 72h results, hook retention, CPA trends..."
+                          placeholder="Summary of observation results, hook retention, CPA trends..."
                           disabled={!isAssignedMB}
                         />
                       </div>
@@ -825,11 +1140,11 @@ export const RecordDrawer = ({
 
                       {isAssignedMB ? (
                         <Button variant="primary" onClick={handleSubmitPerformanceReport} disabled={isProcessing}>
-                          {isProcessing ? 'Submitting Report...' : 'Submit 72H Performance Report'}
+                          {isProcessing ? 'Submitting Report...' : 'Submit Performance Report'}
                         </Button>
                       ) : (
                         <div style={{ fontSize: '0.8rem', color: '#8C8D82' }}>
-                          Only the assigned Media Buyer ({record.assignedMediaBuyer?.name || 'Unassigned'}) can submit the 72h report.
+                          Only the assigned Media Buyer ({record.assignedMediaBuyer?.name || 'Unassigned'}) can submit the performance report.
                         </div>
                       )}
                     </div>
@@ -850,28 +1165,75 @@ export const RecordDrawer = ({
                   {/* Read-Only Media Buyer Metrics for CS */}
                   <div style={{ marginBottom: '16px' }}>
                     <div style={{ fontSize: '0.78rem', fontWeight: 700, color: '#8C8D82', textTransform: 'uppercase', marginBottom: '8px' }}>
-                      Media Buyer 72H Metrics (Read-Only)
+                      Media Buyer Performance Report Summary
                     </div>
+
+                    {/* Individual Creative Performance Cards */}
+                    {record.creativePerformances && record.creativePerformances.length > 0 && (
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: '10px', marginBottom: '14px' }}>
+                        {record.creativePerformances.map((cp, idx) => (
+                          <div
+                            key={cp.creativeId || idx}
+                            style={{
+                              border: '1px solid #E5E5DC',
+                              borderRadius: '8px',
+                              background: '#FFFFFF',
+                              padding: '10px 12px',
+                              display: 'flex',
+                              flexDirection: 'column',
+                              gap: '6px'
+                            }}
+                          >
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                              <strong style={{ fontSize: '0.82rem', color: '#1A1A1A' }}>
+                                {cp.creativeName || `Creative #${idx + 1}`}
+                              </strong>
+                              <span
+                                style={{
+                                  fontSize: '0.7rem',
+                                  fontWeight: 700,
+                                  padding: '2px 6px',
+                                  borderRadius: '4px',
+                                  background: cp.performanceStatus === 'LOSER' ? '#FEE2E2' : '#DCFCE7',
+                                  color: cp.performanceStatus === 'LOSER' ? '#991B1B' : '#15803D'
+                                }}
+                              >
+                                {cp.performanceStatus === 'LOSER' ? 'Loser' : 'Winner'}
+                              </span>
+                            </div>
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '4px 8px', fontSize: '0.75rem' }}>
+                              <div><span style={{ color: '#6B7280' }}>Spend:</span> <strong>₹{cp.spend ?? 0}</strong></div>
+                              <div><span style={{ color: '#6B7280' }}>CPR:</span> <strong>₹{cp.costPerResult ?? 0}</strong></div>
+                              <div><span style={{ color: '#6B7280' }}>Purchases:</span> <strong>{cp.purchases ?? 0}</strong></div>
+                              <div><span style={{ color: '#6B7280' }}>ROAS:</span> <strong>{cp.roas ?? 0}x</strong></div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
                     <div className="kpi-metrics-grid">
                       <div className="kpi-card">
-                        <div className="kpi-title">CTR</div>
-                        <div className="kpi-value">{record.ctr != null ? `${record.ctr}%` : '—'}</div>
+                        <div className="kpi-title">TOTAL SPEND</div>
+                        <div className="kpi-value">{record.spend != null ? `₹${record.spend}` : '—'}</div>
                       </div>
                       <div className="kpi-card">
-                        <div className="kpi-title">CPC</div>
-                        <div className="kpi-value">{record.cpc != null ? record.cpc : '—'}</div>
-                      </div>
-                      <div className="kpi-card">
-                        <div className="kpi-title">CPM</div>
-                        <div className="kpi-value">{record.cpm != null ? record.cpm : '—'}</div>
+                        <div className="kpi-title">TOTAL PURCHASES</div>
+                        <div className="kpi-value">{record.purchases != null ? record.purchases : '—'}</div>
                       </div>
                       <div className="kpi-card">
                         <div className="kpi-title">ROAS</div>
                         <div className="kpi-value">{record.roas != null ? `${record.roas}x` : '—'}</div>
                       </div>
+                      <div className="kpi-card">
+                        <div className="kpi-title">OVERALL STATUS</div>
+                        <div className="kpi-value" style={{ fontSize: '0.9rem', color: record.performanceStatus === 'LOSER' ? '#DC2626' : '#16A34A' }}>
+                          {record.performanceStatus || '—'}
+                        </div>
+                      </div>
                     </div>
                     {record.performanceNotes && (
-                      <div style={{ background: '#FAFAF7', border: '1px solid #E5E5DC', borderRadius: '6px', padding: '8px 12px', fontSize: '0.82rem', color: '#1A1A1A' }}>
+                      <div style={{ background: '#FAFAF7', border: '1px solid #E5E5DC', borderRadius: '6px', padding: '8px 12px', fontSize: '0.82rem', color: '#1A1A1A', marginTop: '10px' }}>
                         <strong>MB Notes:</strong> {record.performanceNotes}
                       </div>
                     )}
@@ -1637,16 +1999,18 @@ export const RecordDrawer = ({
       </div>
 
       {/* EDIT ASSIGNMENT & SCHEDULE MODAL */}
-      <EditAssignmentModal
-        isOpen={isEditModalOpen}
-        onClose={() => setIsEditModalOpen(false)}
-        record={record}
-        allUsers={allUsers}
-        onSubmit={async (recId, updateData) => {
-          await onUpdateRecord(recId, updateData);
-          await loadTimeline();
-        }}
-      />
+      {isEditModalOpen && record && (
+        <EditAssignmentModal
+          isOpen={isEditModalOpen}
+          onClose={() => setIsEditModalOpen(false)}
+          record={record}
+          allUsers={allUsers}
+          onSubmit={async (recId, updateData) => {
+            await onUpdateRecord(recId, updateData);
+            await loadTimeline();
+          }}
+        />
+      )}
     </div>
   );
 };

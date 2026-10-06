@@ -1,14 +1,16 @@
+const MONTH_NAMES = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
 /**
- * Format ISO date string or Date object to DD/MM/YYYY
+ * Format ISO date string or Date object to DD Mon YYYY (e.g. 05 Oct 2026)
  */
 export const formatDate = (dateValue) => {
   if (!dateValue) return '—';
   const d = new Date(dateValue);
   if (isNaN(d.getTime())) return '—';
   const day = String(d.getDate()).padStart(2, '0');
-  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const month = MONTH_NAMES[d.getMonth()];
   const year = d.getFullYear();
-  return `${day}/${month}/${year}`;
+  return `${day} ${month} ${year}`;
 };
 
 /**
@@ -25,21 +27,20 @@ export const toInputDateFormat = (dateValue) => {
 };
 
 /**
- * Format date time: DD/MM/YYYY hh:mm A
+ * Format date time: DD Mon · hh:mm A (e.g. 05 Oct · 06:03 PM)
  */
 export const formatDateTime = (dateValue) => {
   if (!dateValue) return '—';
   const d = new Date(dateValue);
   if (isNaN(d.getTime())) return '—';
   const day = String(d.getDate()).padStart(2, '0');
-  const month = String(d.getMonth() + 1).padStart(2, '0');
-  const year = d.getFullYear();
+  const month = MONTH_NAMES[d.getMonth()];
   let hours = d.getHours();
   const minutes = String(d.getMinutes()).padStart(2, '0');
   const ampm = hours >= 12 ? 'PM' : 'AM';
   hours = hours % 12 || 12;
   const hoursStr = String(hours).padStart(2, '0');
-  return `${day}/${month}/${year} ${hoursStr}:${minutes} ${ampm}`;
+  return `${day} ${month} · ${hoursStr}:${minutes} ${ampm}`;
 };
 
 /**

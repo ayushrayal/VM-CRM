@@ -20,6 +20,26 @@ export const createCreativeStrategy = async (data) => {
   return response.data;
 };
 
+export const unifiedCreateCreativeStrategy = async (data) => {
+  const response = await api.post('/creative-strategy/unified-create', data);
+  return response.data;
+};
+
+export const getTargetingLocations = async () => {
+  const response = await api.get('/creative-strategy/targeting-locations');
+  return response.data;
+};
+
+export const uploadCreativeFile = async (data) => {
+  const response = await api.post('/creative-strategy/upload', data);
+  return response.data;
+};
+
+export const deleteCreativeFile = async (fileId) => {
+  const response = await api.delete(`/creative-strategy/upload/${fileId}`);
+  return response.data;
+};
+
 export const updateCreativeStrategy = async (id, data) => {
   const response = await api.patch(`/creative-strategy/${id}`, data);
   return response.data;

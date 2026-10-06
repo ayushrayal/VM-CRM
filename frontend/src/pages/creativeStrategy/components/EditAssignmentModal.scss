@@ -1,35 +1,52 @@
 @use '../../../styles/variables' as *;
 @use '../../../styles/mixins' as *;
 
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  backdrop-filter: blur(2px);
+  z-index: 1100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  animation: fadeIn 0.15s ease-out;
+}
+
 .edit-assignment-modal {
-  max-width: 620px;
-  width: 95%;
+  max-width: 560px;
+  width: 100%;
   max-height: 90vh;
   display: flex;
   flex-direction: column;
   background: #FFFFFF;
-  border-radius: 12px;
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+  border-radius: 10px;
+  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.12);
+  border: 1px solid #E5E5DC;
   overflow: hidden;
+  font-family: $font-body;
+  color: #1A1A1A;
 
   .modal-header {
     display: flex;
     justify-content: space-between;
     align-items: flex-start;
-    padding: 20px 24px;
+    padding: 18px 22px;
     border-bottom: 1px solid #E5E5DC;
     background: #FFFFFF;
 
     .modal-title {
-      font-size: 1.25rem;
-      font-weight: 800;
+      font-size: 1.15rem;
+      font-weight: 700;
       color: #000000;
-      margin: 0 0 4px;
+      margin: 0 0 3px;
+      font-family: $font-heading;
       letter-spacing: -0.01em;
     }
 
     .modal-subtitle {
-      font-size: 0.82rem;
+      font-size: 0.8rem;
       color: #5A5B52;
       margin: 0;
     }
@@ -41,7 +58,8 @@
       color: #8C8D82;
       cursor: pointer;
       line-height: 1;
-      padding: 0;
+      padding: 0 4px;
+      transition: color $transition-fast;
 
       &:hover {
         color: #000000;
@@ -50,51 +68,51 @@
   }
 
   .modal-body {
-    padding: 20px 24px;
+    padding: 18px 22px;
     overflow-y: auto;
     display: flex;
     flex-direction: column;
-    gap: 18px;
+    gap: 16px;
   }
 
   .edit-error-banner {
     background: #FEF2F2;
     border: 1px solid #FECACA;
     color: #991B1B;
-    padding: 10px 14px;
+    padding: 9px 12px;
     border-radius: 6px;
-    font-size: 0.85rem;
+    font-size: 0.82rem;
     font-weight: 500;
   }
 
   .form-section-card {
-    background: #FAFAF7;
+    background: #FFFFFF;
     border: 1px solid #E5E5DC;
     border-radius: 8px;
-    padding: 16px;
+    padding: 14px 16px;
     display: flex;
     flex-direction: column;
-    gap: 12px;
+    gap: 10px;
 
     .section-header {
       display: flex;
       align-items: center;
-      gap: 8px;
-      margin-bottom: 4px;
+      gap: 6px;
+      margin-bottom: 2px;
 
       .section-badge {
         background: #000000;
         color: #F2EA1A;
-        font-size: 0.68rem;
-        font-weight: 800;
+        font-size: 0.65rem;
+        font-weight: 700;
         text-transform: uppercase;
-        padding: 2px 6px;
-        border-radius: 4px;
-        letter-spacing: 0.05em;
+        padding: 1px 5px;
+        border-radius: 3px;
+        letter-spacing: 0.04em;
       }
 
       .section-title {
-        font-size: 0.9rem;
+        font-size: 0.85rem;
         font-weight: 700;
         color: #000000;
       }
@@ -104,31 +122,33 @@
   .form-group {
     display: flex;
     flex-direction: column;
-    gap: 6px;
+    gap: 5px;
 
     label {
-      font-size: 0.8rem;
+      font-size: 0.78rem;
       font-weight: 600;
       color: #393A31;
     }
 
     .field-hint {
-      font-size: 0.72rem;
+      font-size: 0.7rem;
       color: #8C8D82;
-      margin-top: 2px;
+      margin-top: 1px;
     }
   }
 
   .modal-select,
   .modal-input {
     width: 100%;
-    padding: 9px 12px;
+    height: 44px;
+    padding: 0 12px;
     background: #FFFFFF;
-    border: 1px solid #D5D5CA;
-    border-radius: 6px;
-    font-size: 0.85rem;
+    border: 1px solid #E5E5DC;
+    border-radius: 8px;
+    font-size: 0.84rem;
     color: #1A1A1A;
     box-sizing: border-box;
+    transition: all $transition-fast;
 
     &:focus {
       outline: none;
@@ -137,18 +157,18 @@
     }
   }
 
-  /* Current owner box */
+  /* Current owner preview */
   .current-owner-preview {
-    background: #FFFFFF;
+    background: #FAFAF7;
     border: 1px solid #E5E5DC;
     border-radius: 6px;
-    padding: 10px 12px;
+    padding: 8px 12px;
     display: flex;
     justify-content: space-between;
     align-items: center;
 
     .owner-label {
-      font-size: 0.8rem;
+      font-size: 0.76rem;
       font-weight: 600;
       color: #5A5B52;
     }
@@ -159,53 +179,57 @@
       gap: 6px;
 
       .owner-name {
-        font-weight: 700;
-        font-size: 0.88rem;
+        font-weight: 600;
+        font-size: 0.82rem;
         color: #000000;
 
         &.unassigned {
-          color: #DC2626;
-          font-style: italic;
+          color: #92400E;
+          background: #FEF3C7;
+          border: 1px solid #FDE68A;
+          padding: 1px 6px;
+          border-radius: 4px;
+          font-size: 0.72rem;
         }
       }
 
       .admin-chip {
         background: #FEF9C3;
         color: #854D0E;
-        font-size: 0.68rem;
+        font-size: 0.65rem;
         font-weight: 700;
-        padding: 2px 6px;
-        border-radius: 4px;
+        padding: 1px 5px;
+        border-radius: 3px;
         border: 1px solid #FDE047;
       }
 
       .role-chip {
         background: #EFF6FF;
-        color: #1E40AF;
-        font-size: 0.68rem;
-        font-weight: 700;
-        padding: 2px 6px;
-        border-radius: 4px;
+        color: #1D4ED8;
+        font-size: 0.65rem;
+        font-weight: 600;
+        padding: 1px 5px;
+        border-radius: 3px;
         text-transform: capitalize;
       }
     }
   }
 
   .specific-roles-toggle {
-    margin-top: 4px;
+    margin-top: 2px;
 
     .toggle-link {
       background: none;
       border: none;
-      color: #2563EB;
-      font-size: 0.78rem;
+      color: #000000;
+      font-size: 0.75rem;
       font-weight: 600;
       cursor: pointer;
       padding: 0;
-      text-align: left;
+      text-decoration: underline;
 
       &:hover {
-        text-decoration: underline;
+        color: #5A5B52;
       }
     }
   }
@@ -213,9 +237,13 @@
   .specific-roles-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 12px;
+    gap: 10px;
     padding-top: 8px;
-    border-top: 1px dashed #D5D5CA;
+    border-top: 1px dashed #E5E5DC;
+
+    @media (max-width: 500px) {
+      grid-template-columns: 1fr;
+    }
   }
 
   /* Schedule controls */
@@ -227,16 +255,16 @@
     .checkbox-wrap {
       display: flex;
       align-items: center;
-      gap: 6px;
+      gap: 5px;
 
       input {
         cursor: pointer;
       }
 
       label {
-        font-size: 0.78rem;
-        font-weight: 600;
-        color: #64748B;
+        font-size: 0.75rem;
+        font-weight: 500;
+        color: #5A5B52;
         cursor: pointer;
       }
     }
@@ -247,35 +275,37 @@
     gap: 8px;
 
     .quick-now-btn {
-      padding: 0 14px;
-      background: #EFEFE8;
-      border: 1px solid #D5D5CA;
-      border-radius: 6px;
+      padding: 0 12px;
+      height: 44px;
+      background: #FFFFFF;
+      border: 1px solid #E5E5DC;
+      border-radius: 8px;
       font-size: 0.78rem;
       font-weight: 600;
       color: #1A1A1A;
       cursor: pointer;
 
       &:hover {
-        background: #E0E0D6;
+        background: #F4F4EE;
+        border-color: #000000;
       }
     }
   }
 
   .mode-toggle-group {
     display: flex;
-    background: #EFEFE8;
+    background: #F4F4EE;
     border-radius: 6px;
     padding: 3px;
     gap: 4px;
 
     .mode-btn {
       flex: 1;
-      padding: 6px 12px;
+      padding: 6px 10px;
       border: none;
       border-radius: 4px;
       background: transparent;
-      font-size: 0.8rem;
+      font-size: 0.78rem;
       font-weight: 600;
       color: #5A5B52;
       cursor: pointer;
@@ -284,7 +314,7 @@
       &.active {
         background: #FFFFFF;
         color: #000000;
-        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
       }
     }
   }
@@ -295,24 +325,24 @@
     gap: 8px;
 
     label {
-      font-size: 0.8rem;
+      font-size: 0.78rem;
       font-weight: 600;
       color: #393A31;
     }
 
     .preset-buttons-row {
       display: flex;
-      gap: 8px;
+      gap: 6px;
       flex-wrap: wrap;
 
       .preset-btn {
         flex: 1;
-        min-width: 90px;
-        padding: 7px 10px;
+        min-width: 80px;
+        height: 38px;
         background: #FFFFFF;
-        border: 1px solid #D5D5CA;
+        border: 1px solid #E5E5DC;
         border-radius: 6px;
-        font-size: 0.8rem;
+        font-size: 0.78rem;
         font-weight: 600;
         color: #1A1A1A;
         cursor: pointer;
@@ -324,9 +354,10 @@
         }
 
         &.active {
-          background: #000000;
-          border-color: #000000;
-          color: #F2EA1A;
+          background: #F2EA1A;
+          border-color: #D8D00E;
+          color: #000000;
+          font-weight: 700;
         }
       }
     }
@@ -334,58 +365,60 @@
     .custom-duration-inputs {
       display: flex;
       align-items: flex-end;
-      gap: 10px;
-      background: #FFFFFF;
-      border: 1px solid #D5D5CA;
+      gap: 8px;
+      background: #FAFAF7;
+      border: 1px solid #E5E5DC;
       border-radius: 6px;
-      padding: 10px 14px;
+      padding: 10px 12px;
       margin-top: 4px;
 
       .duration-field {
         display: flex;
         flex-direction: column;
-        gap: 4px;
-        width: 70px;
+        gap: 3px;
+        width: 60px;
 
         label {
-          font-size: 0.72rem;
+          font-size: 0.68rem;
           color: #8C8D82;
         }
 
         .duration-num-input {
-          padding: 6px;
-          border: 1px solid #D5D5CA;
-          border-radius: 4px;
-          font-size: 0.85rem;
+          height: 36px;
+          padding: 0 4px;
+          border: 1px solid #E5E5DC;
+          border-radius: 6px;
+          font-size: 0.82rem;
           font-weight: 600;
           text-align: center;
+          background: #FFFFFF;
         }
       }
 
       .duration-summary-pill {
         margin-left: auto;
-        font-size: 0.82rem;
-        color: #15803D;
+        font-size: 0.76rem;
+        color: #166534;
         background: #F0FDF4;
         border: 1px solid #BBF7D0;
-        padding: 6px 12px;
-        border-radius: 6px;
+        padding: 4px 10px;
+        border-radius: 4px;
       }
     }
   }
 
   .custom-due-date-wrap {
     .date-error-text {
-      font-size: 0.75rem;
-      color: #DC2626;
+      font-size: 0.74rem;
+      color: #991B1B;
       font-weight: 600;
       margin-top: 4px;
       display: block;
     }
 
     .date-info-text {
-      font-size: 0.75rem;
-      color: #15803D;
+      font-size: 0.74rem;
+      color: #166534;
       font-weight: 600;
       margin-top: 4px;
       display: block;
@@ -393,10 +426,10 @@
   }
 
   .schedule-preview-box {
-    background: #FFFFFF;
-    border: 1px dashed #C8C8B8;
+    background: #FAFAF7;
+    border: 1px dashed #D5D5CA;
     border-radius: 6px;
-    padding: 10px 14px;
+    padding: 10px 12px;
     display: flex;
     flex-direction: column;
     gap: 4px;
@@ -404,15 +437,16 @@
     .preview-row {
       display: flex;
       justify-content: space-between;
-      font-size: 0.8rem;
+      font-size: 0.78rem;
 
       .preview-label {
         color: #5A5B52;
-        font-weight: 600;
+        font-weight: 500;
       }
 
       .preview-value {
         color: #1A1A1A;
+        font-weight: 600;
       }
     }
   }
@@ -422,17 +456,16 @@
     color: #991B1B;
     border: 1px solid #FECACA;
     font-size: 0.68rem;
-    font-weight: 800;
-    padding: 1px 6px;
-    border-radius: 4px;
-    letter-spacing: 0.04em;
+    font-weight: 700;
+    padding: 1px 5px;
+    border-radius: 3px;
   }
 
   .modal-footer {
     display: flex;
     justify-content: flex-end;
     gap: 10px;
-    padding: 16px 24px;
+    padding: 14px 22px;
     background: #FAFAF7;
     border-top: 1px solid #E5E5DC;
   }

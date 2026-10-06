@@ -34,6 +34,7 @@ import { DeleteCampaignModal } from './components/DeleteCampaignModal';
 import { AddAdSetModal } from './components/AddAdSetModal';
 import { DeleteAdSetModal } from './components/DeleteAdSetModal';
 import { AddRecordModal } from './components/AddRecordModal';
+import { UnifiedAddCreativeWizard } from './components/UnifiedAddCreativeWizard';
 import { DeleteCreativeModal } from './components/DeleteCreativeModal';
 import { EditAssignmentModal } from './components/EditAssignmentModal';
 
@@ -321,6 +322,14 @@ export const CreativeStrategyPage = () => {
     setIsDrawerOpen(true);
   };
 
+  const handleUnifiedCreateSuccess = async (created) => {
+    await Promise.all([loadCampaigns(), loadAdSets(), loadRecords()]);
+    if (created?._id) {
+      setSelectedRecord(created);
+      setIsDrawerOpen(true);
+    }
+  };
+
   const handleDeleteCreativeConfirm = async (recordId) => {
     await deleteCreativeStrategy(recordId);
     await loadRecords();
@@ -531,29 +540,13 @@ export const CreativeStrategyPage = () => {
       <section className="workspace-toolbar">
         <div className="toolbar-left">
           {isAdmin && (
-            <>
-              <Button
-                variant="primary"
-                size="sm"
-                onClick={() => setIsAddRecordOpen(true)}
-              >
-                + Add Creative
-              </Button>
-              <Button
-                variant="secondary"
-                size="sm"
-                onClick={() => setIsAddCampaignOpen(true)}
-              >
-                + Add Campaign
-              </Button>
-              <Button
-                variant="secondary"
-                size="sm"
-                onClick={() => setIsAddAdSetOpen(true)}
-              >
-                + Add Ad Set
-              </Button>
-            </>
+            <button
+              type="button"
+              className="toolbar-btn btn-primary-add"
+              onClick={() => setIsAddRecordOpen(true)}
+            >
+              + Add Creative
+            </button>
           )}
         </div>
 
@@ -562,7 +555,7 @@ export const CreativeStrategyPage = () => {
             <span className="search-icon">🔍</span>
             <input
               type="text"
-              placeholder="Search hierarchy, creative..."
+              placeholder="Search client, campaign, creative..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
@@ -574,8 +567,8 @@ export const CreativeStrategyPage = () => {
             onChange={(e) => setCycleFilter(e.target.value)}
           >
             <option value="ALL">All Cycles</option>
-            <option value="ACTIVE">⚡ Active Cycles Only</option>
-            <option value="ARCHIVED">📁 Archived Cycles Only</option>
+            <option value="ACTIVE">Active Cycles</option>
+            <option value="ARCHIVED">Archived Cycles</option>
           </select>
 
           <select
@@ -603,8 +596,8 @@ export const CreativeStrategyPage = () => {
       {/* 4. WORKSPACE MAIN TABLE & HIERARCHY */}
       <main className="workspace-content-area">
         {isLoading ? (
-          <div style={{ textAlign: 'center', padding: '60px', color: '#8C8D82' }}>
-            Loading creative strategy workspace...
+          <div className="workspace-loading-state">
+            Loading creative strategy records...
           </div>
         ) : filteredRecords.length === 0 ? (
           <div className="workspace-empty-container">
@@ -626,9 +619,6 @@ export const CreativeStrategyPage = () => {
                 <Button variant="primary" onClick={() => setIsAddRecordOpen(true)}>
                   + Add Creative
                 </Button>
-                <Button variant="secondary" onClick={() => setIsAddCampaignOpen(true)}>
-                  + Add Campaign
-                </Button>
               </div>
             )}
           </div>
@@ -637,229 +627,154 @@ export const CreativeStrategyPage = () => {
             <table className="workflow-table">
               <thead>
                 <tr>
-                  <th>Client</th>
-                  <th>Campaign</th>
-                  <th>Ad Set</th>
-                  <th>Creative</th>
-                  <th>Cycle</th>
-                  <th>Current Stage</th>
-                  <th>Current Owner</th>
-                  <th>Launch Date</th>
-                  <th>Report Due</th>
-                  <th>Status</th>
-                  <th>Next Action</th>
-                  <th>Actions</th>
+                  <th className="th-client">Client</th>
+                  <th className="th-campaign">Campaign</th>
+                  <th className="th-adset">Ad Set</th>
+                  <th className="th-creative">Creative</th>
+                  <th className="th-stage">Stage</th>
+                  <th className="th-owner">Owner</th>
+                  <th className="th-status">Status</th>
+                  <th className="th-actions">Action</th>
                 </tr>
               </thead>
               <tbody>
                 {filteredRecords.map((r) => {
                   const isLocked = r.status === 'LAUNCHED' && r.reportDueAt && now < new Date(r.reportDueAt).getTime();
                   const remainingMs = r.reportDueAt ? Math.max(0, new Date(r.reportDueAt).getTime() - now) : 0;
+                  const owner = getCurrentOwner(r);
+                  const isUnassigned = owner.name === 'UNASSIGNED' || owner.name === 'Unassigned';
 
                   return (
                     <tr key={r._id} onClick={() => handleRowClick(r)}>
-                      {/* Client */}
-                      <td>
-                        <span className="client-tag-badge">
+                      {/* 1. Client */}
+                      <td className="td-client">
+                        <span className="client-code-pill" title={r.client?.name || 'Client'}>
                           {r.client?.code || r.client?.name || '—'}
                         </span>
                       </td>
 
-                      {/* Campaign */}
-                      <td>
-                        <div className="campaign-cell-content">
-                          <span className="campaign-name-text">
-                            {r.campaignName || r.campaign?.name || '—'}
-                          </span>
-                          {r.campaignLaunchDate && (
-                            <span className="campaign-date-sub">
-                              Launched {formatDate(r.campaignLaunchDate)}
-                            </span>
-                          )}
-                        </div>
-                      </td>
-
-                      {/* Ad Set */}
-                      <td style={{ color: '#5A5B52', fontWeight: 500 }}>
-                        {r.currentAdSetName || r.adSet?.name || '—'}
-                      </td>
-
-                      {/* Creative */}
-                      <td>
-                        <span className="creative-title-text">
-                          {r.creativeName || r.creativesProposed || 'Creative'}
+                      {/* 2. Campaign */}
+                      <td className="td-campaign">
+                        <span
+                          className="cell-truncate text-medium"
+                          title={r.campaignName || r.campaign?.name || '—'}
+                        >
+                          {r.campaignName || r.campaign?.name || '—'}
                         </span>
                       </td>
 
-                      {/* Cycle - Clear ACTIVE vs ARCHIVED distinction */}
-                      <td>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                      {/* 3. Ad Set */}
+                      <td className="td-adset">
+                        <span
+                          className="cell-truncate text-muted"
+                          title={r.currentAdSetName || r.adSet?.name || '—'}
+                        >
+                          {r.currentAdSetName || r.adSet?.name || '—'}
+                        </span>
+                      </td>
+
+                      {/* 4. Creative + Cycle */}
+                      <td className="td-creative">
+                        <div className="creative-title-group">
                           <span
-                            className="cycle-pill-badge"
-                            style={{
-                              background: r.status === 'COMPLETED' ? '#F1F5F9' : '#FEF9C3',
-                              color: r.status === 'COMPLETED' ? '#64748B' : '#854D0E',
-                              borderColor: r.status === 'COMPLETED' ? '#CBD5E1' : '#FDE047',
-                              fontWeight: 700
-                            }}
+                            className="cell-truncate creative-name-text"
+                            title={r.creativeName || r.creativesProposed || 'Creative'}
                           >
+                            {r.creativeName || r.creativesProposed || 'Creative'}
+                          </span>
+                          <span className="cycle-sub-pill">
                             {r.currentTestingCycle || `Cycle ${r.cycleNumber || 1}`}
                           </span>
-                          {r.status === 'COMPLETED' ? (
-                            <span style={{ fontSize: '0.68rem', fontWeight: 700, color: '#64748B', display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
-                              📁 ARCHIVED
-                            </span>
-                          ) : (
-                            <span style={{ fontSize: '0.68rem', fontWeight: 700, color: '#16A34A', display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
-                              ● ACTIVE
-                            </span>
-                          )}
                         </div>
                       </td>
 
-                      {/* Current Stage Badge */}
-                      <td>
+                      {/* 5. Stage */}
+                      <td className="td-stage">
                         <StatusBadge status={r.status} record={r} />
                       </td>
 
-                      {/* Current Owner */}
-                      <td>
+                      {/* 6. Owner */}
+                      <td className="td-owner">
+                        {isUnassigned ? (
+                          <span className="owner-unassigned-pill">Unassigned</span>
+                        ) : (
+                          <div className="owner-pill-group" title={`${owner.role}: ${owner.name}`}>
+                            <span className="owner-role-label">{owner.role}</span>
+                            <span
+                              className="owner-user-pill"
+                              style={{ background: owner.bg, color: owner.color }}
+                            >
+                              {owner.name}
+                              {owner.isAdmin && <span className="owner-admin-tag">Admin</span>}
+                            </span>
+                          </div>
+                        )}
+                      </td>
+
+                      {/* 7. Status & Timing */}
+                      <td className="td-status">
                         {(() => {
-                          const owner = getCurrentOwner(r);
-                          const isUnassigned = owner.name === 'UNASSIGNED' || owner.name === 'Unassigned';
-                          return (
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                              <span style={{ fontSize: '0.72rem', fontWeight: 700, color: '#8C8D82', textTransform: 'uppercase' }}>
-                                {owner.role}
-                              </span>
-                              {isUnassigned ? (
-                                <span className="unassigned-owner-badge">
-                                  UNASSIGNED
-                                </span>
-                              ) : (
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                                  <span
-                                    style={{
-                                      fontSize: '0.78rem',
-                                      fontWeight: 600,
-                                      padding: '2px 8px',
-                                      borderRadius: '4px',
-                                      width: 'fit-content',
-                                      background: owner.bg,
-                                      color: owner.color
-                                    }}
-                                  >
-                                    {owner.name}
-                                  </span>
-                                  {owner.isAdmin && (
-                                    <span style={{ fontSize: '0.65rem', background: '#FEF9C3', color: '#854D0E', padding: '1px 4px', borderRadius: '3px', fontWeight: 700, border: '1px solid #FDE047' }}>
-                                      Admin
-                                    </span>
-                                  )}
+                          if (r.status === 'LAUNCHED' && r.reportDueAt) {
+                            if (isLocked) {
+                              return (
+                                <div className="status-timing-cell">
+                                  <span className="status-wait-pill">WAITING 72H</span>
+                                  <span className="status-time-sub">{formatDurationMs(remainingMs)} left</span>
                                 </div>
-                              )}
-                            </div>
+                              );
+                            }
+                            return (
+                              <div className="status-timing-cell">
+                                <span className="status-due-pill">REPORT DUE</span>
+                                <span className="status-time-sub">{formatDate(r.reportDueAt)}</span>
+                              </div>
+                            );
+                          }
+                          if (r.status === 'COMPLETED') {
+                            return <span className="status-archived-pill">Archived</span>;
+                          }
+                          return (
+                            <span className="status-next-action-text" title={getNextActionText(r)}>
+                              {getNextActionText(r)}
+                            </span>
                           );
                         })()}
                       </td>
 
-                      {/* Launch Date */}
-                      <td>
-                        {r.launchedAt || r.launchDate ? (
-                          <div className="date-time-cell">
-                            <span className="date-line">{formatDate(r.launchedAt || r.launchDate)}</span>
-                            <span className="time-line">{formatTime(r.launchedAt || r.launchDate)}</span>
-                          </div>
-                        ) : (
-                          <span className="unscheduled-pill">UNSCHEDULED</span>
-                        )}
-                      </td>
-
-                      {/* Report Due */}
-                      <td>
-                        {r.status === 'LAUNCHED' && r.reportDueAt ? (
-                          <div className="report-due-indicator">
-                            <span className="due-label">
-                              {r.observationDurationHours && r.observationDurationHours !== 72
-                                ? `REPORT DUE (${r.observationDurationHours}H)`
-                                : '72-HOUR REPORT DUE'}
-                            </span>
-                            <div className="date-time-cell">
-                              <span className="date-line">{formatDate(r.reportDueAt)}</span>
-                              <span className="time-line">{formatTime(r.reportDueAt)}</span>
-                            </div>
-                            {isLocked ? (
-                              <span className="lock-countdown">🔒 {formatDurationMs(remainingMs)} left</span>
-                            ) : (
-                              <span className="unlocked-badge">🔓 UNLOCKED</span>
-                            )}
-                          </div>
-                        ) : r.reportDueAt ? (
-                          <div className="report-due-indicator">
-                            <span className="due-label">
-                              {r.observationDurationHours && r.observationDurationHours !== 72
-                                ? `REPORT DUE (${r.observationDurationHours}H)`
-                                : '72-HOUR REPORT DUE'}
-                            </span>
-                            <div className="date-time-cell">
-                              <span className="date-line">{formatDate(r.reportDueAt)}</span>
-                              <span className="time-line">{formatTime(r.reportDueAt)}</span>
-                            </div>
-                          </div>
-                        ) : r.reportSubmittedAt ? (
-                          <div className="report-submitted-cell">
-                            <span style={{ color: '#166534', fontSize: '0.78rem', fontWeight: 700 }}>✓ Submitted</span>
-                            <span className="date-line" style={{ fontSize: '0.75rem', color: '#5A5B52' }}>{formatDate(r.reportSubmittedAt)}</span>
-                          </div>
-                        ) : (
-                          <span className="unscheduled-pill">UNSCHEDULED</span>
-                        )}
-                      </td>
-
-                      {/* Status */}
-                      <td>
-                        <StatusBadge status={r.status} record={r} />
-                      </td>
-
-                      {/* Next Action */}
-                      <td>
-                        <span className="next-action-text">{getNextActionText(r)}</span>
-                      </td>
-
-                      {/* Actions */}
-                      <td onClick={(e) => e.stopPropagation()}>
-                        <div style={{ display: 'flex', gap: '6px' }}>
-                          <Button
-                            variant="secondary"
-                            size="sm"
+                      {/* 8. Actions */}
+                      <td className="td-actions" onClick={(e) => e.stopPropagation()}>
+                        <div className="row-action-buttons">
+                          <button
+                            type="button"
+                            className="btn-action btn-workspace"
                             onClick={() => handleRowClick(r)}
                           >
                             Workspace
-                          </Button>
+                          </button>
                           {isAdmin && (
-                            <Button
-                              variant="secondary"
-                              size="sm"
+                            <button
+                              type="button"
+                              className="btn-action btn-edit"
                               onClick={() => {
                                 setRecordToEdit(r);
                                 setIsEditAssignmentOpen(true);
                               }}
                             >
                               Edit
-                            </Button>
+                            </button>
                           )}
                           {isAdmin && (
-                            <Button
-                              variant="ghost"
-                              size="sm"
+                            <button
+                              type="button"
+                              className="btn-action btn-delete"
+                              title="Delete creative"
                               onClick={() => {
                                 setCreativeToDelete(r);
                                 setIsDeleteCreativeOpen(true);
                               }}
-                              style={{ color: '#991B1B' }}
                             >
-                              🗑
-                            </Button>
+                              Delete
+                            </button>
                           )}
                         </div>
                       </td>
@@ -940,7 +855,7 @@ export const CreativeStrategyPage = () => {
         onConfirm={handleDeleteAdSetConfirm}
       />
 
-      <AddRecordModal
+      <UnifiedAddCreativeWizard
         isOpen={isAddRecordOpen}
         onClose={() => setIsAddRecordOpen(false)}
         clients={clients}
@@ -951,7 +866,7 @@ export const CreativeStrategyPage = () => {
         graphicDesigners={graphicDesigners}
         allUsers={allUsers}
         defaultClientId={selectedClientId !== 'all' ? selectedClientId : clients[0]?._id}
-        onSubmit={handleCreateRecordSubmit}
+        onSuccess={handleUnifiedCreateSuccess}
       />
 
       <DeleteCreativeModal
@@ -964,16 +879,18 @@ export const CreativeStrategyPage = () => {
         onConfirm={handleDeleteCreativeConfirm}
       />
 
-      <EditAssignmentModal
-        isOpen={isEditAssignmentOpen}
-        onClose={() => {
-          setIsEditAssignmentOpen(false);
-          setRecordToEdit(null);
-        }}
-        record={recordToEdit}
-        allUsers={allUsers}
-        onSubmit={handleUpdateRecord}
-      />
+      {isEditAssignmentOpen && recordToEdit && (
+        <EditAssignmentModal
+          isOpen={isEditAssignmentOpen}
+          onClose={() => {
+            setIsEditAssignmentOpen(false);
+            setRecordToEdit(null);
+          }}
+          record={recordToEdit}
+          allUsers={allUsers}
+          onSubmit={handleUpdateRecord}
+        />
+      )}
     </div>
   );
 };

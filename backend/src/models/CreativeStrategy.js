@@ -29,6 +29,80 @@ const creativeStrategySchema = new mongoose.Schema(
       trim: true,
       default: ''
     },
+    adName: {
+      type: String,
+      trim: true,
+      default: ''
+    },
+    adType: {
+      type: String,
+      enum: ['Static', 'Video', 'Carousel', 'Catalog'],
+      default: 'Static'
+    },
+    landingPageUrl: {
+      type: String,
+      trim: true,
+      default: ''
+    },
+    testingStyle: {
+      type: String,
+      trim: true,
+      default: 'New Angle'
+    },
+    creatives: [
+      {
+        url: { type: String, trim: true, default: '' },
+        fileId: { type: String, trim: true, default: '' },
+        name: { type: String, trim: true, default: '' },
+        mimeType: { type: String, trim: true, default: '' },
+        size: { type: Number, default: 0 }
+      }
+    ],
+    // Hierarchy snapshots
+    campaignType: {
+      type: String,
+      default: 'CBO'
+    },
+    campaignObjective: {
+      type: String,
+      default: 'Sales'
+    },
+    campaignBudget: {
+      type: Number,
+      default: null
+    },
+    adSetBudget: {
+      type: Number,
+      default: null
+    },
+    adSetAgeGroup: {
+      start: { type: Number, default: 18 },
+      end: { type: Number, default: 65 }
+    },
+    adSetGender: {
+      type: String,
+      default: 'Both'
+    },
+    adSetIncludedLocations: {
+      type: [String],
+      default: []
+    },
+    adSetExcludedLocations: {
+      type: [String],
+      default: []
+    },
+    adSetTargeting: {
+      type: String,
+      default: 'Broad'
+    },
+    adSetInterests: {
+      type: [String],
+      default: []
+    },
+    partOfCurrentCycle: {
+      type: Boolean,
+      default: true
+    },
     campaignName: {
       type: String,
       trim: true,
@@ -129,6 +203,44 @@ const creativeStrategySchema = new mongoose.Schema(
       type: Number,
       default: null
     },
+    spend: {
+      type: Number,
+      default: null
+    },
+    costPerResult: {
+      type: Number,
+      default: null
+    },
+    purchases: {
+      type: Number,
+      default: null
+    },
+    purchaseConversionValue: {
+      type: Number,
+      default: null
+    },
+    performanceStatus: {
+      type: String,
+      enum: ['WINNER', 'LOSER', 'PENDING'],
+      default: 'PENDING'
+    },
+    selectedCreatives: {
+      type: [String],
+      default: []
+    },
+    creativePerformances: [
+      {
+        creativeId: { type: String, default: '' },
+        creativeName: { type: String, default: '' },
+        previewUrl: { type: String, default: '' },
+        spend: { type: Number, default: 0, min: 0 },
+        costPerResult: { type: Number, default: 0, min: 0 },
+        purchases: { type: Number, default: 0, min: 0 },
+        purchaseConversionValue: { type: Number, default: 0, min: 0 },
+        roas: { type: Number, default: 0, min: 0 },
+        performanceStatus: { type: String, enum: ['WINNER', 'LOSER'], default: 'WINNER' }
+      }
+    ],
     performanceNotes: {
       type: String,
       trim: true,

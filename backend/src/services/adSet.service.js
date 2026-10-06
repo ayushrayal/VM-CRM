@@ -17,7 +17,22 @@ export const getAllAdSets = async () => {
   return await AdSet.find().populate('campaign', 'name').populate('client', 'name code').sort({ createdAt: -1 });
 };
 
-export const createAdSet = async ({ name, campaignId, launchDate, status, currentTestingCycle, userId }) => {
+export const createAdSet = async ({
+  name,
+  campaignId,
+  launchDate,
+  budget,
+  ageGroup,
+  gender,
+  includedLocations,
+  excludedLocations,
+  targeting,
+  interests,
+  partOfCurrentCycle,
+  status,
+  currentTestingCycle,
+  userId
+}) => {
   const campaign = await Campaign.findById(campaignId);
   if (!campaign) {
     throw new ApiError(404, 'Campaign not found');
@@ -28,6 +43,14 @@ export const createAdSet = async ({ name, campaignId, launchDate, status, curren
     campaign: campaignId,
     client: campaign.client,
     launchDate: launchDate ? new Date(launchDate) : null,
+    budget: budget !== undefined ? budget : null,
+    ageGroup: ageGroup || { start: 18, end: 65 },
+    gender: gender || 'Both',
+    includedLocations: Array.isArray(includedLocations) ? includedLocations : [],
+    excludedLocations: Array.isArray(excludedLocations) ? excludedLocations : [],
+    targeting: targeting || 'Broad',
+    interests: Array.isArray(interests) ? interests : [],
+    partOfCurrentCycle: partOfCurrentCycle !== undefined ? partOfCurrentCycle : true,
     status: status || 'ACTIVE',
     currentTestingCycle: currentTestingCycle || 1,
     createdBy: userId
@@ -47,6 +70,14 @@ export const updateAdSet = async (adSetId, updateData) => {
   if (updateData.launchDate !== undefined) {
     adSet.launchDate = updateData.launchDate ? new Date(updateData.launchDate) : null;
   }
+  if (updateData.budget !== undefined) adSet.budget = updateData.budget;
+  if (updateData.ageGroup !== undefined) adSet.ageGroup = updateData.ageGroup;
+  if (updateData.gender !== undefined) adSet.gender = updateData.gender;
+  if (updateData.includedLocations !== undefined) adSet.includedLocations = updateData.includedLocations;
+  if (updateData.excludedLocations !== undefined) adSet.excludedLocations = updateData.excludedLocations;
+  if (updateData.targeting !== undefined) adSet.targeting = updateData.targeting;
+  if (updateData.interests !== undefined) adSet.interests = updateData.interests;
+  if (updateData.partOfCurrentCycle !== undefined) adSet.partOfCurrentCycle = updateData.partOfCurrentCycle;
   if (updateData.status !== undefined) adSet.status = updateData.status;
   if (updateData.currentTestingCycle !== undefined) {
     adSet.currentTestingCycle = updateData.currentTestingCycle;

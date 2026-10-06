@@ -5,6 +5,9 @@ export const createCampaignSchema = z.object({
     name: z.string().trim().min(1, 'Campaign name is required').max(200),
     clientId: z.string().regex(/^[0-9a-fA-F]{24}$/, 'Invalid client ID'),
     launchDate: z.string().nullable().optional(),
+    campaignType: z.enum(['CBO', 'ABO']).optional(),
+    budget: z.number().nullable().optional(),
+    objective: z.enum(['Lead Generation', 'Sales', 'Catalog Sales']).optional(),
     status: z.enum(['ACTIVE', 'PAUSED', 'COMPLETED', 'DRAFT']).optional(),
     notes: z.string().trim().optional()
   })

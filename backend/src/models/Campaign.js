@@ -18,6 +18,20 @@ const campaignSchema = new mongoose.Schema(
       type: Date,
       default: null
     },
+    campaignType: {
+      type: String,
+      enum: ['CBO', 'ABO'],
+      default: 'CBO'
+    },
+    budget: {
+      type: Number,
+      default: null
+    },
+    objective: {
+      type: String,
+      enum: ['Lead Generation', 'Sales', 'Catalog Sales'],
+      default: 'Sales'
+    },
     status: {
       type: String,
       enum: ['ACTIVE', 'PAUSED', 'COMPLETED', 'DRAFT'],

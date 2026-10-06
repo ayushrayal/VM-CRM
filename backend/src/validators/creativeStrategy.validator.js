@@ -1,6 +1,67 @@
 import { z } from 'zod';
 import { WORKFLOW_STATUS, ABHISHEK_DECISION, REVIEW_STATUS } from '../constants/creativeWorkflow.js';
 
+export const unifiedCreateCreativeStrategySchema = z.object({
+  body: z.object({
+    clientId: z.string().regex(/^[0-9a-fA-F]{24}$/, 'Invalid client ID'),
+    isNewCampaign: z.boolean().default(false),
+    campaignId: z.string().regex(/^[0-9a-fA-F]{24}$/, 'Invalid campaign ID').nullable().optional(),
+    campaignData: z.object({
+      name: z.string().trim().optional(),
+      campaignType: z.enum(['CBO', 'ABO']).optional(),
+      budget: z.number().nullable().optional(),
+      objective: z.enum(['Lead Generation', 'Sales', 'Catalog Sales']).optional(),
+      launchDate: z.string().nullable().optional(),
+      notes: z.string().optional()
+    }).optional(),
+    isNewAdSet: z.boolean().default(false),
+    adSetId: z.string().regex(/^[0-9a-fA-F]{24}$/, 'Invalid ad set ID').nullable().optional(),
+    adSetData: z.object({
+      name: z.string().trim().optional(),
+      ageGroup: z.object({
+        start: z.number().min(13).max(100).optional(),
+        end: z.number().min(13).max(100).optional()
+      }).optional(),
+      budget: z.number().nullable().optional(),
+      gender: z.enum(['Male', 'Female', 'Both']).optional(),
+      includedLocations: z.array(z.string()).optional(),
+      excludedLocations: z.array(z.string()).optional(),
+      targeting: z.enum(['Broad', 'Interest']).optional(),
+      interests: z.array(z.string()).optional(),
+      launchDate: z.string().nullable().optional(),
+      partOfCurrentCycle: z.boolean().optional()
+    }).optional(),
+    creativeData: z.object({
+      adName: z.string().trim().min(1, 'Ad Name is required'),
+      adType: z.enum(['Static', 'Video', 'Carousel', 'Catalog']).default('Static'),
+      landingPageUrl: z.string().trim().optional(),
+      testingStyle: z.string().trim().default('New Angle'),
+      creatives: z.array(
+        z.object({
+          url: z.string(),
+          fileId: z.string().optional(),
+          name: z.string().optional(),
+          mimeType: z.string().optional(),
+          size: z.number().optional()
+        })
+      ).max(20, 'Maximum 20 creative files allowed').optional(),
+      launchDate: z.string().nullable().optional(),
+      observationDurationHours: z.number().min(0.1).max(8760).optional(),
+      schedulingMode: z.enum(['DURATION', 'CUSTOM_DUE_DATE']).optional(),
+      reportDueAt: z.string().nullable().optional(),
+      cycleNumber: z.number().int().min(1).optional(),
+      currentTestingCycle: z.string().optional(),
+      assignedMediaBuyer: z.string().regex(/^[0-9a-fA-F]{24}$/).nullable().optional(),
+      assignedCreativeStrategist: z.string().regex(/^[0-9a-fA-F]{24}$/).nullable().optional(),
+      assignedGraphicDesigner: z.string().regex(/^[0-9a-fA-F]{24}$/).nullable().optional(),
+      assignedTo: z.string().regex(/^[0-9a-fA-F]{24}$/).nullable().optional(),
+      creativesProposed: z.string().optional(),
+      hypothesis: z.string().optional(),
+      finalAssetConfiguration: z.string().optional()
+    })
+  })
+});
+
 export const createCreativeStrategySchema = z.object({
   body: z.object({
     clientId: z.string().regex(/^[0-9a-fA-F]{24}$/, 'Invalid client ID'),
@@ -167,6 +228,25 @@ export const submitReportSchema = z.object({
     cpc: z.number().optional().nullable(),
     cpm: z.number().optional().nullable(),
     roas: z.number().optional().nullable(),
+    spend: z.number().min(0, 'Spend cannot be negative').optional().nullable(),
+    costPerResult: z.number().min(0, 'Cost per result cannot be negative').optional().nullable(),
+    purchases: z.number().min(0, 'Purchases cannot be negative').optional().nullable(),
+    purchaseConversionValue: z.number().min(0, 'Purchase conversion value cannot be negative').optional().nullable(),
+    performanceStatus: z.enum(['WINNER', 'LOSER']).optional(),
+    selectedCreatives: z.array(z.string()).optional(),
+    creativePerformances: z.array(
+      z.object({
+        creativeId: z.string().optional(),
+        creativeName: z.string().optional(),
+        previewUrl: z.string().optional(),
+        spend: z.number().min(0, 'Spend cannot be negative').optional(),
+        costPerResult: z.number().min(0, 'Cost per result cannot be negative').optional(),
+        purchases: z.number().min(0, 'Purchases cannot be negative').optional(),
+        purchaseConversionValue: z.number().min(0, 'Purchase conversion value cannot be negative').optional(),
+        roas: z.number().min(0, 'ROAS cannot be negative').optional(),
+        performanceStatus: z.enum(['WINNER', 'LOSER']).optional()
+      })
+    ).optional(),
     performanceNotes: z.string().optional(),
     additionalObservations: z.string().optional(),
     reportNotes: z.string().optional()
