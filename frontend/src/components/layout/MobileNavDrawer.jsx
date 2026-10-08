@@ -53,6 +53,14 @@ export const MobileNavDrawer = ({ isOpen, onClose, user, isAdmin, onSignout }) =
           </NavLink>
 
           <NavLink
+            to="/projections"
+            className={({ isActive }) => `drawer-link ${isActive ? 'active' : ''}`}
+            onClick={onClose}
+          >
+            📈 Project Projections
+          </NavLink>
+
+          <NavLink
             to="/gamiply/cro"
             className={({ isActive }) => `drawer-link ${isActive ? 'active' : ''}`}
             onClick={onClose}

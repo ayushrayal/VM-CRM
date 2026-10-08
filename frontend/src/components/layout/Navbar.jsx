@@ -66,10 +66,11 @@ export const Navbar = () => {
 
             <div className="nav-gamiply-dropdown">
               <NavLink
-                to="/gamiply/cro"
+                to="/projections"
                 className={({ isActive }) =>
                   `nav-link ${
                     isActive ||
+                    location.pathname.startsWith('/projections') ||
                     location.pathname.startsWith('/gamiply') ||
                     location.pathname === '/cro-gamiply' ||
                     location.pathname === '/creative-gamiply'
@@ -81,6 +82,9 @@ export const Navbar = () => {
                 Performance ▾
               </NavLink>
               <div className="gamiply-menu">
+                <NavLink to="/projections" className="gamiply-item">
+                  📈 Project Projections
+                </NavLink>
                 <NavLink to="/gamiply/cro" className="gamiply-item">
                   🧪 CRO Performance
                 </NavLink>

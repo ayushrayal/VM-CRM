@@ -3,6 +3,7 @@ import { Campaign } from '../models/Campaign.js';
 import { AdSet } from '../models/AdSet.js';
 import { CreativeStrategy } from '../models/CreativeStrategy.js';
 import { CreativeStrategyTimeline } from '../models/CreativeStrategyTimeline.js';
+import { ProjectProjection } from '../models/ProjectProjection.js';
 import { ApiError } from '../utils/ApiError.js';
 import { broadcastEvent } from './sse.service.js';
 
@@ -144,6 +145,7 @@ export const deleteClient = async (clientId) => {
 
   await AdSet.deleteMany({ client: clientId });
   await Campaign.deleteMany({ client: clientId });
+  await ProjectProjection.deleteMany({ client: clientId });
   
   // NOTE: Historical performance records (CreativePerformance and CROExperiment)
   // are explicitly PRESERVED and not deleted!
