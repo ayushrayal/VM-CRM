@@ -1,17 +1,39 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { NavLink } from 'react-router-dom';
 import { Badge } from '../common/Badge';
 import { Button } from '../common/Button';
 import './MobileNavDrawer.scss';
 
 export const MobileNavDrawer = ({ isOpen, onClose, user, isAdmin, onSignout }) => {
+  // Lock body scroll and handle Escape key when open
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') onClose();
+    };
+
+    const originalOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    window.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      document.body.style.overflow = originalOverflow;
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [isOpen, onClose]);
+
   if (!isOpen) return null;
 
   return (
     <div className="mobile-drawer-overlay" onClick={onClose}>
       <div className="mobile-drawer-content" onClick={(e) => e.stopPropagation()}>
         <div className="drawer-header">
-          <span className="drawer-brand">VYTALIS MEDIA CRM</span>
+          <div className="drawer-brand">
+            <span className="drawer-brand-text">VYTALIS MEDIA</span>
+            <span className="drawer-brand-dot" />
+            <span className="drawer-brand-sub">CRM</span>
+          </div>
           <button className="drawer-close" onClick={onClose} aria-label="Close menu">
             &times;
           </button>
@@ -19,8 +41,10 @@ export const MobileNavDrawer = ({ isOpen, onClose, user, isAdmin, onSignout }) =
 
         {user && (
           <div className="drawer-user-info">
-            <span className="drawer-user-name">{user.name}</span>
-            <span className="drawer-user-email">{user.email}</span>
+            <div className="drawer-user-details">
+              <span className="drawer-user-name">{user.name}</span>
+              <span className="drawer-user-email">{user.email}</span>
+            </div>
             <Badge variant={user.role} className="drawer-role-badge">
               {user.role}
             </Badge>
@@ -52,38 +76,43 @@ export const MobileNavDrawer = ({ isOpen, onClose, user, isAdmin, onSignout }) =
             Creative Strategy
           </NavLink>
 
+          <div className="drawer-section-heading">Performance</div>
+
           <NavLink
             to="/projections"
-            className={({ isActive }) => `drawer-link ${isActive ? 'active' : ''}`}
+            className={({ isActive }) => `drawer-link drawer-sublink ${isActive ? 'active' : ''}`}
             onClick={onClose}
           >
-            📈 Project Projections
+            Project Projections
           </NavLink>
 
           <NavLink
             to="/gamiply/cro"
-            className={({ isActive }) => `drawer-link ${isActive ? 'active' : ''}`}
+            className={({ isActive }) => `drawer-link drawer-sublink ${isActive ? 'active' : ''}`}
             onClick={onClose}
           >
-            🧪 CRO Performance
+            CRO Performance
           </NavLink>
 
           <NavLink
             to="/gamiply/creative"
-            className={({ isActive }) => `drawer-link ${isActive ? 'active' : ''}`}
+            className={({ isActive }) => `drawer-link drawer-sublink ${isActive ? 'active' : ''}`}
             onClick={onClose}
           >
-            🎨 Creative Performance
+            Creative Performance
           </NavLink>
 
           {isAdmin && (
-            <NavLink
-              to="/user-management"
-              className={({ isActive }) => `drawer-link ${isActive ? 'active' : ''}`}
-              onClick={onClose}
-            >
-              User Management
-            </NavLink>
+            <>
+              <div className="drawer-section-heading">Administration</div>
+              <NavLink
+                to="/user-management"
+                className={({ isActive }) => `drawer-link ${isActive ? 'active' : ''}`}
+                onClick={onClose}
+              >
+                User Management
+              </NavLink>
+            </>
           )}
         </nav>
 

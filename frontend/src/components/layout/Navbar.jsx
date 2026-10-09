@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { Badge } from '../common/Badge';
@@ -12,8 +12,26 @@ export const Navbar = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const [isMobileOpen, setIsMobileOpen] = useState(false);
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const dropdownRef = useRef(null);
+
+  // Close dropdown on outside click or route change
+  useEffect(() => {
+    setIsDropdownOpen(false);
+  }, [location.pathname]);
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setIsDropdownOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   const handleSignout = async () => {
+    setIsMobileOpen(false);
     await signout();
     navigate('/login');
   };
@@ -22,6 +40,7 @@ export const Navbar = () => {
     if (!name) return 'U';
     return name
       .split(' ')
+      .filter(Boolean)
       .map((n) => n[0])
       .join('')
       .toUpperCase()
@@ -30,66 +49,121 @@ export const Navbar = () => {
 
   const isAdmin = user?.role === 'admin';
 
+  const isPerformanceActive =
+    location.pathname.startsWith('/projections') ||
+    location.pathname.startsWith('/gamiply') ||
+    location.pathname === '/cro-gamiply' ||
+    location.pathname === '/creative-gamiply';
+
   return (
     <>
       <header className="top-navbar">
         <div className="navbar-container">
-          {/* Brand Logo Placeholder */}
-          <NavLink to="/dashboard" className="brand-logo">
-            <span className="brand-text">VYTALIS MEDIA</span>
-            <span className="brand-dot" />
-            <span className="brand-sub">CRM</span>
-          </NavLink>
+          {/* 1. Left: Brand Logo */}
+          <div className="navbar-section navbar-left">
+            <NavLink to="/dashboard" className="brand-logo" aria-label="Vytalis Media CRM Dashboard">
+              <span className="brand-text">VYTALIS MEDIA</span>
+              <span className="brand-dot" />
+              <span className="brand-sub">CRM</span>
+            </NavLink>
+          </div>
 
-          {/* Desktop Navigation */}
-          <nav className="desktop-nav">
+          {/* 2. Center: Desktop Navigation Links */}
+          <nav className="navbar-section navbar-center desktop-nav" aria-label="Main Navigation">
             <NavLink
               to="/dashboard"
               className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}
             >
-              Dashboard
+              <span className="nav-label">Dashboard</span>
             </NavLink>
 
             <NavLink
               to="/clients"
               className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}
             >
-              Clients
+              <span className="nav-label">Clients</span>
             </NavLink>
 
             <NavLink
               to="/creative-strategy"
               className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}
             >
-              Creative Strategy
+              <span className="nav-label">Creative Strategy</span>
             </NavLink>
 
-            <div className="nav-gamiply-dropdown">
+            <div
+              className={`nav-gamiply-dropdown ${isDropdownOpen ? 'is-open' : ''}`}
+              ref={dropdownRef}
+              onMouseEnter={() => setIsDropdownOpen(true)}
+              onMouseLeave={() => setIsDropdownOpen(false)}
+            >
               <NavLink
                 to="/projections"
                 className={({ isActive }) =>
-                  `nav-link ${
-                    isActive ||
-                    location.pathname.startsWith('/projections') ||
-                    location.pathname.startsWith('/gamiply') ||
-                    location.pathname === '/cro-gamiply' ||
-                    location.pathname === '/creative-gamiply'
-                      ? 'active'
-                      : ''
+                  `nav-link nav-dropdown-trigger ${
+                    isActive || isPerformanceActive ? 'active' : ''
                   }`
                 }
               >
-                Performance ▾
+                <span className="nav-label">Performance</span>
+                <span
+                  className="dropdown-chevron-wrapper"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    setIsDropdownOpen((prev) => !prev);
+                  }}
+                  role="button"
+                  tabIndex={0}
+                  aria-label="Toggle Performance submenu"
+                >
+                  <svg
+                    className="dropdown-chevron"
+                    width="10"
+                    height="10"
+                    viewBox="0 0 10 10"
+                    fill="none"
+                    aria-hidden="true"
+                  >
+                    <path
+                      d="M2 3.5L5 6.5L8 3.5"
+                      stroke="currentColor"
+                      strokeWidth="1.75"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  </svg>
+                </span>
               </NavLink>
+
               <div className="gamiply-menu">
-                <NavLink to="/projections" className="gamiply-item">
-                  📈 Project Projections
+                <NavLink
+                  to="/projections"
+                  end
+                  className={({ isActive }) =>
+                    `gamiply-item ${isActive ? 'active' : ''}`
+                  }
+                  onClick={() => setIsDropdownOpen(false)}
+                >
+                  Project Projections
                 </NavLink>
-                <NavLink to="/gamiply/cro" className="gamiply-item">
-                  🧪 CRO Performance
+                <NavLink
+                  to="/gamiply/cro"
+                  className={({ isActive }) =>
+                    `gamiply-item ${isActive ? 'active' : ''}`
+                  }
+                  onClick={() => setIsDropdownOpen(false)}
+                >
+                  CRO Performance
                 </NavLink>
-                <NavLink to="/gamiply/creative" className="gamiply-item">
-                  🎨 Creative Performance
+                <NavLink
+                  to="/gamiply/creative"
+                  className={({ isActive }) =>
+                    `gamiply-item ${isActive ? 'active' : ''}`
+                  }
+                  onClick={() => setIsDropdownOpen(false)}
+                >
+                  Creative Performance
                 </NavLink>
               </div>
             </div>
@@ -99,21 +173,23 @@ export const Navbar = () => {
                 to="/user-management"
                 className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}
               >
-                User Management
+                <span className="nav-label">User Management</span>
               </NavLink>
             )}
           </nav>
 
-          {/* User Profile Pill & Signout */}
-          <div className="navbar-user-actions" style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          {/* 3. Right: Notifications, User Avatar & Profile, Sign Out, Hamburger */}
+          <div className="navbar-section navbar-right">
             {user && <NotificationBell />}
 
             {user && (
               <div className="user-profile-pill">
                 <div className="avatar-circle">{getInitials(user.name)}</div>
                 <div className="user-info">
-                  <span className="user-name">{user.name}</span>
-                  <Badge variant={user.role}>{user.role}</Badge>
+                  <span className="user-name" title={user.name}>{user.name}</span>
+                  <Badge variant={user.role} className="user-role-badge">
+                    {user.role}
+                  </Badge>
                 </div>
               </div>
             )}
@@ -122,7 +198,7 @@ export const Navbar = () => {
               Sign Out
             </Button>
 
-            {/* Mobile Hamburger Toggle */}
+            {/* Mobile / Tablet Hamburger Toggle */}
             <button
               className="hamburger-btn"
               onClick={() => setIsMobileOpen(true)}

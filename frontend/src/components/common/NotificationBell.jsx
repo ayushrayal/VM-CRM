@@ -138,7 +138,7 @@ export const NotificationBell = () => {
   };
 
   return (
-    <div className="notification-bell-container" ref={dropdownRef} style={{ position: 'relative' }}>
+    <div className="notification-bell-container" ref={dropdownRef} style={{ position: 'relative', flexShrink: 0, display: 'flex', alignItems: 'center' }}>
       <button
         type="button"
         onClick={handleToggle}
@@ -149,13 +149,16 @@ export const NotificationBell = () => {
           borderRadius: '8px',
           width: '38px',
           height: '38px',
+          minWidth: '38px',
+          minHeight: '38px',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
           cursor: 'pointer',
           position: 'relative',
           color: '#1A1A1A',
-          transition: 'all 0.15s ease'
+          transition: 'all 0.15s ease',
+          flexShrink: 0
         }}
       >
         {/* Bell SVG */}
