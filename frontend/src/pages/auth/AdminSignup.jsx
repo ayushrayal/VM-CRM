@@ -4,6 +4,7 @@ import { useAuth } from '../../context/AuthContext';
 import { Input } from '../../components/common/Input';
 import { Button } from '../../components/common/Button';
 import { AlertBanner } from '../../components/common/AlertBanner';
+import { Lock } from 'lucide-react';
 import './AuthForm.scss';
 
 export const AdminSignup = () => {
@@ -67,7 +68,8 @@ export const AdminSignup = () => {
         </div>
 
         <div className="auth-notice-banner">
-          🔒 Admin registration requires an authorized secret access key provided by system administrators.
+          <Lock size={14} style={{ display: 'inline', verticalAlign: 'text-bottom', marginRight: '6px' }} />
+          Admin registration requires an authorized secret access key provided by system administrators.
         </div>
 
         <AlertBanner type="error" message={errorMsg} onClose={() => setErrorMsg('')} />

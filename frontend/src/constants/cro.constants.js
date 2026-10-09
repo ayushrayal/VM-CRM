@@ -17,12 +17,12 @@ export const CRO_STATUS_CONFIG = Object.freeze({
 });
 
 export const CRO_BADGES = Object.freeze({
-  FIRST_EXPERIMENT: { id: 'FIRST_EXPERIMENT', name: 'First Experiment', icon: '🧪', desc: 'Created 1st CRO experiment' },
-  FIRST_SUCCESS: { id: 'FIRST_SUCCESS', name: 'First Success', icon: '🎯', desc: '1st successful experiment' },
-  CRO_STARTER: { id: 'CRO_STARTER', name: 'CRO Starter', icon: '⚡', desc: 'Earned 100+ points' },
-  CRO_EXPLORER: { id: 'CRO_EXPLORER', name: 'CRO Explorer', icon: '🧭', desc: 'Documented 5+ experiments' },
-  CRO_PERFORMER: { id: 'CRO_PERFORMER', name: 'CRO Performer', icon: '🚀', desc: '500+ points / 3+ successes' },
-  CRO_CHAMPION: { id: 'CRO_CHAMPION', name: 'CRO Champion', icon: '🏆', desc: '1,000+ total points' }
+  FIRST_EXPERIMENT: { id: 'FIRST_EXPERIMENT', name: 'First Experiment', icon: '', desc: 'Created 1st CRO experiment' },
+  FIRST_SUCCESS: { id: 'FIRST_SUCCESS', name: 'First Success', icon: '', desc: '1st successful experiment' },
+  CRO_STARTER: { id: 'CRO_STARTER', name: 'CRO Starter', icon: '', desc: 'Earned 100+ points' },
+  CRO_EXPLORER: { id: 'CRO_EXPLORER', name: 'CRO Explorer', icon: '', desc: 'Documented 5+ experiments' },
+  CRO_PERFORMER: { id: 'CRO_PERFORMER', name: 'CRO Performer', icon: '', desc: '500+ points / 3+ successes' },
+  CRO_CHAMPION: { id: 'CRO_CHAMPION', name: 'CRO Champion', icon: '', desc: '1,000+ total points' }
 });
 
 export const PERIOD_FILTERS = Object.freeze([

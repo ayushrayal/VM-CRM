@@ -8,7 +8,17 @@ import {
   updateCroExperiment,
   deleteCroExperiment
 } from '../../api/cro.api';
-import { CRO_STATUSES, CRO_BADGES } from '../../constants/cro.constants';
+import { CRO_STATUSES } from '../../constants/cro.constants';
+import {
+  Trophy,
+  FlaskConical,
+  Award,
+  Users,
+  Plus,
+  User,
+  AlertTriangle
+} from 'lucide-react';
+import { PageHeader } from '../../components/common/PageHeader';
 import { ExperimentCard } from '../../components/croGamiply/ExperimentCard';
 import { ExperimentDetailModal } from '../../components/croGamiply/ExperimentDetailModal';
 import { ExperimentFormModal } from '../../components/croGamiply/ExperimentFormModal';
@@ -191,38 +201,33 @@ export const CROGamiplyPage = () => {
         </div>
       )}
 
-      {/* Header Banner & Gamification Summary */}
-      <div className="gamiply-header">
-        <div className="header-left">
-          <div className="title-row">
-            <span className="section-badge">CRO PERFORMANCE</span>
-            <h1 className="page-title">CRO Performance</h1>
-          </div>
-          <p className="page-subtitle">
-            Internal CRO experimentation & learning arena. Document hypothesis, track conversion uplifts, and rise on the leaderboard.
-          </p>
-        </div>
-
-        <div className="header-actions">
+      {/* Header Banner */}
+      <PageHeader
+        title="CRO Performance"
+        description="Internal CRO experimentation arena. Document hypotheses, track conversion uplifts, and view rankings."
+        actions={
           <Button
             variant="primary"
-            size="lg"
+            size="md"
+            icon={<Plus size={16} />}
             onClick={() => {
               setFormInitialData(null);
               setIsFormOpen(true);
             }}
           >
-            + New Experiment
+            New Experiment
           </Button>
-        </div>
-      </div>
+        }
+      />
 
       {/* Gamification Stats Bar */}
       {stats && (
         <div className="gamiply-stats-grid">
           {/* User Score & Rank */}
-          <div className="stat-card highlight">
-            <div className="stat-icon">🏆</div>
+          <div className="stat-card">
+            <div className="stat-icon-wrap">
+              <Trophy size={18} strokeWidth={1.75} />
+            </div>
             <div className="stat-content">
               <span className="stat-label">My CRO Rank</span>
               <div className="stat-value-group">
@@ -236,7 +241,9 @@ export const CROGamiplyPage = () => {
 
           {/* User Experiments */}
           <div className="stat-card">
-            <div className="stat-icon">🧪</div>
+            <div className="stat-icon-wrap">
+              <FlaskConical size={18} strokeWidth={1.75} />
+            </div>
             <div className="stat-content">
               <span className="stat-label">My Experiments</span>
               <div className="stat-value-group">
@@ -250,30 +257,23 @@ export const CROGamiplyPage = () => {
 
           {/* Badges Earned */}
           <div className="stat-card">
-            <div className="stat-icon">🎖️</div>
+            <div className="stat-icon-wrap">
+              <Award size={18} strokeWidth={1.75} />
+            </div>
             <div className="stat-content">
               <span className="stat-label">Badges Unlocked</span>
-              <div className="badges-pills-row">
-                {stats.user?.badges?.length > 0 ? (
-                  stats.user.badges.map((bId) => (
-                    <span
-                      key={bId}
-                      className="user-badge-chip"
-                      title={CRO_BADGES[bId]?.name || bId}
-                    >
-                      {CRO_BADGES[bId]?.icon || '🏅'}
-                    </span>
-                  ))
-                ) : (
-                  <span className="empty-sub">Earn points to unlock</span>
-                )}
+              <div className="stat-value-group">
+                <span className="stat-main-val">{stats.user?.badges?.length || 0}</span>
+                <span className="stat-sub-val">achievements</span>
               </div>
             </div>
           </div>
 
           {/* Company-Wide Milestone */}
-          <div className="stat-card global-card">
-            <div className="stat-icon">🌐</div>
+          <div className="stat-card">
+            <div className="stat-icon-wrap">
+              <Users size={18} strokeWidth={1.75} />
+            </div>
             <div className="stat-content">
               <span className="stat-label">Team Total Impact</span>
               <div className="stat-value-group">
@@ -295,13 +295,13 @@ export const CROGamiplyPage = () => {
           className={`nav-tab-btn ${activeTab === 'experiments' ? 'active' : ''}`}
           onClick={() => setActiveTab('experiments')}
         >
-          🧪 Experiments ({experiments.length})
+          Experiments ({experiments.length})
         </button>
         <button
           className={`nav-tab-btn ${activeTab === 'leaderboard' ? 'active' : ''}`}
           onClick={() => setActiveTab('leaderboard')}
         >
-          🏆 Leaderboard
+          Leaderboard
         </button>
       </div>
 
@@ -316,7 +316,8 @@ export const CROGamiplyPage = () => {
                 className={`filter-pill ${mineOnly ? 'active-mine' : ''}`}
                 onClick={() => setMineOnly(!mineOnly)}
               >
-                👤 Mine Only
+                <User size={13} style={{ marginRight: '4px', verticalAlign: 'text-bottom' }} />
+                Mine Only
               </button>
 
               <div className="filters-divider" />
@@ -369,23 +370,24 @@ export const CROGamiplyPage = () => {
             </div>
           ) : (
             <div className="cro-empty-experiments">
-              <span className="empty-icon">🧪</span>
+              <FlaskConical size={32} className="empty-icon" strokeWidth={1.5} />
               <h3>No CRO experiments found</h3>
               <p>
                 {mineOnly
-                  ? "You haven't created any CRO experiments yet. Click '+ New Experiment' to document your first test!"
+                  ? "You haven't created any CRO experiments yet. Click 'New Experiment' to document your first test."
                   : statusFilter !== 'ALL'
                   ? `No experiments currently in status '${statusFilter}'.`
-                  : 'No CRO experiments have been documented yet. Start by creating the first one!'}
+                  : 'No CRO experiments have been documented yet. Start by creating the first one.'}
               </p>
               <Button
                 variant="primary"
+                icon={<Plus size={15} />}
                 onClick={() => {
                   setFormInitialData(null);
                   setIsFormOpen(true);
                 }}
               >
-                + Create First Experiment
+                Create First Experiment
               </Button>
             </div>
           )}
@@ -455,7 +457,7 @@ export const CROGamiplyPage = () => {
             <strong>"{deleteTarget?.hypothesisTitle}"</strong>?
           </p>
           <p className="delete-warning">
-            ⚠️ This will remove the experiment record, associated screenshot files, and deduct its score points from the creator.
+            This will remove the experiment record, associated screenshot files, and deduct its score points from the creator.
           </p>
 
           <div className="delete-actions">

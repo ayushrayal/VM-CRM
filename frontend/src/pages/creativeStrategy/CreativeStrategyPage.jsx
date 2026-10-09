@@ -40,6 +40,8 @@ import { EditAssignmentModal } from './components/EditAssignmentModal';
 
 import { formatDate, formatDateTime, formatTime, formatDurationMs } from '../../utils/dateUtils';
 import { Button } from '../../components/common/Button';
+import { PageHeader } from '../../components/common/PageHeader';
+import { Plus, Search, FolderOpen } from 'lucide-react';
 import './CreativeStrategyPage.scss';
 
 export const CreativeStrategyPage = () => {
@@ -476,14 +478,22 @@ export const CreativeStrategyPage = () => {
   return (
     <div className="creative-strategy-page">
       {/* 1. TOP HERO HEADER */}
-      <section className="page-hero-header">
-        <div className="header-titles">
-          <h1 className="page-title">Creative Strategy</h1>
-          <p className="page-subtitle">
-            Review performance, analyze creatives, manage learnings and move approved creatives toward launch.
-          </p>
-        </div>
-      </section>
+      <PageHeader
+        title="Creative Strategy"
+        description="Review performance, analyze creatives, manage learnings and move approved creatives toward launch."
+        actions={
+          isAdmin && (
+            <Button
+              variant="primary"
+              size="md"
+              icon={<Plus size={16} />}
+              onClick={() => setIsAddRecordOpen(true)}
+            >
+              Add Creative
+            </Button>
+          )
+        }
+      />
 
       {/* 2. DYNAMIC CLIENT TABS BAR */}
       <section className="client-tabs-bar">
@@ -515,7 +525,7 @@ export const CreativeStrategyPage = () => {
               className="client-tab-chip add-client-btn"
               onClick={() => setIsAddClientOpen(true)}
             >
-              + Add Client
+              Add Client
             </button>
           )}
         </div>
@@ -540,19 +550,20 @@ export const CreativeStrategyPage = () => {
       <section className="workspace-toolbar">
         <div className="toolbar-left">
           {isAdmin && (
-            <button
-              type="button"
-              className="toolbar-btn btn-primary-add"
+            <Button
+              variant="secondary"
+              size="sm"
+              icon={<Plus size={14} />}
               onClick={() => setIsAddRecordOpen(true)}
             >
-              + Add Creative
-            </button>
+              Add Creative
+            </Button>
           )}
         </div>
 
         <div className="toolbar-right">
           <div className="search-input-wrap">
-            <span className="search-icon">🔍</span>
+            <Search size={14} className="search-icon" />
             <input
               type="text"
               placeholder="Search client, campaign, creative..."
@@ -601,7 +612,9 @@ export const CreativeStrategyPage = () => {
           </div>
         ) : filteredRecords.length === 0 ? (
           <div className="workspace-empty-container">
-            <div className="empty-icon">📁</div>
+            <div className="empty-icon-wrap">
+              <FolderOpen size={32} />
+            </div>
             <h3 className="empty-title">
               {searchTerm || statusFilter !== 'ALL'
                 ? 'No matching creatives found'
@@ -616,8 +629,12 @@ export const CreativeStrategyPage = () => {
             </p>
             {isAdmin && (
               <div className="empty-actions">
-                <Button variant="primary" onClick={() => setIsAddRecordOpen(true)}>
-                  + Add Creative
+                <Button
+                  variant="primary"
+                  icon={<Plus size={15} />}
+                  onClick={() => setIsAddRecordOpen(true)}
+                >
+                  Add Creative
                 </Button>
               </div>
             )}

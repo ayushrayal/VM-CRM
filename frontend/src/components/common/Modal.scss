@@ -3,96 +3,115 @@
 .modal-overlay {
   position: fixed;
   inset: 0;
-  background-color: rgba(0, 0, 0, 0.4);
-  backdrop-filter: blur(2px);
+  background-color: rgba(0, 0, 0, 0.35);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
   display: flex;
   align-items: center;
   justify-content: center;
   z-index: 1000;
-  padding: 1rem;
-  animation: fadeIn 0.15s ease-out;
+  padding: 1.25rem;
+  animation: modalFadeIn 0.15s ease-out;
 }
 
 .modal-content {
   background-color: $color-card-bg;
   border: 1px solid $color-border;
-  border-radius: $radius-md;
+  border-radius: $radius-lg;
   width: 100%;
   max-width: 520px;
-  max-height: calc(100vh - 3rem);
+  max-height: calc(100vh - 3.5rem);
   display: flex;
   flex-direction: column;
-  box-shadow: 0 16px 36px -6px rgba(0, 0, 0, 0.16);
+  box-shadow: $shadow-modal;
   overflow: hidden;
-  animation: slideUp 0.15s ease-out;
+  animation: modalSlideUp 0.18s cubic-bezier(0.16, 1, 0.3, 1);
 
   &.modal-sm {
-    max-width: 420px;
+    max-width: 400px;
   }
 
   &.modal-md {
-    max-width: 540px;
+    max-width: 520px;
   }
 
   &.modal-lg {
-    max-width: 760px;
+    max-width: 720px;
   }
 
   &.modal-xl {
-    max-width: 940px;
+    max-width: 900px;
   }
 
   .modal-header {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 1.15rem 1.5rem;
-    border-bottom: 1px solid $color-border;
+    padding: 1rem 1.25rem;
+    border-bottom: 1px solid $color-border-subtle;
     background-color: $color-card-bg;
     flex-shrink: 0;
-    position: sticky;
-    top: 0;
-    z-index: 10;
 
     .modal-title {
-      font-size: 1.15rem;
-      font-weight: 700;
+      font-size: 1.0625rem; // 17px
+      font-weight: 600;
       color: $color-text-primary;
       margin: 0;
+      letter-spacing: -0.015em;
     }
 
     .modal-close {
-      font-size: 1.5rem;
-      color: $color-text-secondary;
-      line-height: 1;
-      padding: 0.2rem 0.5rem;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 28px;
+      height: 28px;
       border-radius: $radius-sm;
+      color: $color-text-secondary;
       background: transparent;
       border: none;
       cursor: pointer;
+      transition: background-color $transition-fast, color $transition-fast;
 
       &:hover {
-        background-color: $color-bg;
-        color: $color-pure-black;
+        background-color: $color-surface-hover;
+        color: $color-text-primary;
       }
     }
   }
 
   .modal-body {
-    padding: 1.5rem;
+    padding: 1.25rem;
     flex: 1;
     overflow-y: auto;
     display: flex;
     flex-direction: column;
   }
+
+  .modal-footer {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 0.65rem;
+    padding: 0.85rem 1.25rem;
+    border-top: 1px solid $color-border-subtle;
+    background-color: $color-surface-subtle;
+    flex-shrink: 0;
+  }
 }
 
-@keyframes fadeIn {
+@keyframes modalFadeIn {
   from { opacity: 0; }
   to { opacity: 1; }
 }
 
-@keyframes slideUp {
-  from { opacity: 0; transform: translateY(10px); }
-  to { opacity: 1; transform: translateY(0); }
+@keyframes modalSlideUp {
+  from {
+    opacity: 0;
+    transform: scale(0.98) translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
 }

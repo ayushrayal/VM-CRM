@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { Bell, Check } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import {
   getNotifications,
@@ -8,6 +9,7 @@ import {
   markAllAsRead
 } from '../../api/notification.api';
 import { getStreamUrl } from '../../api/axios';
+import './NotificationBell.scss';
 
 export const NotificationBell = () => {
   const { user } = useAuth();
@@ -116,7 +118,6 @@ export const NotificationBell = () => {
       const targetId = notif.creativeStrategy?._id || notif.creativeStrategy;
       if (targetId) {
         navigate(`/creative-strategy?recordId=${targetId}`);
-        // Dispatch custom event for page to auto-open drawer
         window.dispatchEvent(new CustomEvent('OPEN_CREATIVE_RECORD', { detail: { recordId: targetId } }));
       }
     } catch (err) {
@@ -138,129 +139,36 @@ export const NotificationBell = () => {
   };
 
   return (
-    <div className="notification-bell-container" ref={dropdownRef} style={{ position: 'relative', flexShrink: 0, display: 'flex', alignItems: 'center' }}>
+    <div className="notification-bell-container" ref={dropdownRef}>
       <button
         type="button"
         onClick={handleToggle}
         aria-label="Notifications"
-        style={{
-          background: 'transparent',
-          border: '1px solid #E5E5DC',
-          borderRadius: '8px',
-          width: '38px',
-          height: '38px',
-          minWidth: '38px',
-          minHeight: '38px',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          cursor: 'pointer',
-          position: 'relative',
-          color: '#1A1A1A',
-          transition: 'all 0.15s ease',
-          flexShrink: 0
-        }}
+        className="notification-bell-btn"
       >
-        {/* Bell SVG */}
-        <svg
-          width="18"
-          height="18"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        >
-          <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
-          <path d="M13.73 21a2 2 0 0 1-3.46 0" />
-        </svg>
-
+        <Bell size={18} strokeWidth={1.75} />
         {unreadCount > 0 && (
-          <span
-            style={{
-              position: 'absolute',
-              top: '-4px',
-              right: '-4px',
-              background: '#F2EA1A',
-              color: '#000000',
-              fontWeight: 700,
-              fontSize: '0.7rem',
-              height: '18px',
-              minWidth: '18px',
-              padding: '0 4px',
-              borderRadius: '9999px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              border: '2px solid #FFFFFF',
-              boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
-            }}
-          >
+          <span className="notification-count-badge">
             {unreadCount > 9 ? '9+' : unreadCount}
           </span>
         )}
       </button>
 
       {isOpen && (
-        <div
-          style={{
-            position: 'absolute',
-            top: '46px',
-            right: 0,
-            width: '360px',
-            maxWidth: '90vw',
-            background: '#FFFFFF',
-            borderRadius: '12px',
-            border: '1px solid #E5E5DC',
-            boxShadow: '0 12px 32px rgba(0, 0, 0, 0.12)',
-            zIndex: 1000,
-            overflow: 'hidden',
-            display: 'flex',
-            flexDirection: 'column'
-          }}
-        >
+        <div className="notification-popover">
           {/* Header */}
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              padding: '12px 16px',
-              borderBottom: '1px solid #E5E5DC',
-              background: '#FAFAF7'
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <span style={{ fontWeight: 700, fontSize: '0.9rem', color: '#1A1A1A' }}>Notifications</span>
+          <div className="popover-header">
+            <div className="header-title-group">
+              <span className="popover-title">Notifications</span>
               {unreadCount > 0 && (
-                <span
-                  style={{
-                    background: '#F2EA1A',
-                    color: '#000000',
-                    fontWeight: 700,
-                    fontSize: '0.72rem',
-                    padding: '2px 8px',
-                    borderRadius: '10px'
-                  }}
-                >
-                  {unreadCount} new
-                </span>
+                <span className="new-count-pill">{unreadCount} new</span>
               )}
             </div>
             {unreadCount > 0 && (
               <button
                 type="button"
                 onClick={handleMarkAll}
-                style={{
-                  background: 'none',
-                  border: 'none',
-                  color: '#5A5B52',
-                  fontSize: '0.78rem',
-                  fontWeight: 600,
-                  cursor: 'pointer',
-                  textDecoration: 'underline'
-                }}
+                className="mark-all-btn"
               >
                 Mark all read
               </button>
@@ -268,77 +176,37 @@ export const NotificationBell = () => {
           </div>
 
           {/* List */}
-          <div style={{ maxHeight: '380px', overflowY: 'auto' }}>
+          <div className="notifications-list-container">
             {loading ? (
-              <div style={{ padding: '24px', textAlign: 'center', color: '#8C8D82', fontSize: '0.85rem' }}>
+              <div className="notifications-loading">
                 Loading updates...
               </div>
             ) : notifications.length === 0 ? (
-              <div style={{ padding: '32px 16px', textAlign: 'center' }}>
-                <div style={{ fontSize: '1.5rem', marginBottom: '8px' }}>✓</div>
-                <div style={{ fontWeight: 600, color: '#1A1A1A', fontSize: '0.88rem' }}>All caught up!</div>
-                <div style={{ color: '#8C8D82', fontSize: '0.8rem', marginTop: '4px' }}>
-                  No new workflow notifications
+              <div className="notifications-empty">
+                <div className="empty-icon">
+                  <Check size={18} strokeWidth={2} />
                 </div>
+                <div className="empty-title">All caught up</div>
+                <div className="empty-desc">No new workflow notifications</div>
               </div>
             ) : (
               notifications.map((notif) => (
                 <div
                   key={notif._id}
                   onClick={() => handleNotificationClick(notif)}
-                  style={{
-                    padding: '12px 16px',
-                    borderBottom: '1px solid #F0F0EB',
-                    background: notif.isRead ? '#FFFFFF' : '#FFFDF0',
-                    cursor: 'pointer',
-                    transition: 'background 0.15s ease',
-                    display: 'flex',
-                    gap: '10px',
-                    alignItems: 'flex-start'
-                  }}
-                  onMouseEnter={(e) => (e.currentTarget.style.background = '#F7F7F2')}
-                  onMouseLeave={(e) =>
-                    (e.currentTarget.style.background = notif.isRead ? '#FFFFFF' : '#FFFDF0')
-                  }
+                  className={`notification-item ${!notif.isRead ? 'is-unread' : ''}`}
                 >
                   <div
-                    style={{
-                      width: '8px',
-                      height: '8px',
-                      borderRadius: '50%',
-                      background: notif.isRead ? 'transparent' : '#F2EA1A',
-                      marginTop: '6px',
-                      flexShrink: 0
-                    }}
+                    className={`unread-indicator-dot ${notif.isRead ? 'read' : ''}`}
                   />
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: '8px' }}>
-                      <div
-                        style={{
-                          fontWeight: notif.isRead ? 600 : 700,
-                          fontSize: '0.85rem',
-                          color: '#1A1A1A',
-                          whiteSpace: 'nowrap',
-                          overflow: 'hidden',
-                          textOverflow: 'ellipsis'
-                        }}
-                      >
-                        {notif.title}
-                      </div>
-                      <div style={{ fontSize: '0.72rem', color: '#8C8D82', flexShrink: 0 }}>
+                  <div className="item-content">
+                    <div className="item-header-row">
+                      <div className="item-title">{notif.title}</div>
+                      <div className="item-timestamp">
                         {formatRelativeTime(notif.createdAt)}
                       </div>
                     </div>
-                    <div
-                      style={{
-                        fontSize: '0.8rem',
-                        color: '#5A5B52',
-                        marginTop: '3px',
-                        lineHeight: '1.4'
-                      }}
-                    >
-                      {notif.message}
-                    </div>
+                    <div className="item-message">{notif.message}</div>
                   </div>
                 </div>
               ))

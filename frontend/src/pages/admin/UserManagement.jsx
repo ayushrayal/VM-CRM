@@ -8,6 +8,7 @@ import {
   deleteUserApi,
   updateUserTeamRoleApi
 } from '../../api/admin.api';
+import { PageHeader } from '../../components/common/PageHeader';
 import { UserCard } from './UserCard';
 import { RequestCard } from './RequestCard';
 import { AssignRoleModal } from './AssignRoleModal';
@@ -181,9 +182,10 @@ export const UserManagement = () => {
 
   return (
     <div className="user-management-page">
-      <div className="page-header">
-        <h1 className="page-title">User Management</h1>
-      </div>
+      <PageHeader
+        title="User Management"
+        description="Manage team members, roles, permissions, and pending signup requests."
+      />
 
       {/* Segmented Tab Switcher */}
       <div className="tab-switcher-bar">

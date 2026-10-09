@@ -1,4 +1,5 @@
 import React from 'react';
+import { Trophy } from 'lucide-react';
 import { PERIOD_FILTERS } from '../../constants/creative.constants';
 import './CreativeLeaderboardTable.scss';
 
@@ -15,10 +16,7 @@ export const CreativeLeaderboardTable = ({
     return '';
   };
 
-  const getRankIcon = (rank) => {
-    if (rank === 1) return '🥇';
-    if (rank === 2) return '🥈';
-    if (rank === 3) return '🥉';
+  const getRankLabel = (rank) => {
     return `#${rank}`;
   };
 
@@ -56,8 +54,7 @@ export const CreativeLeaderboardTable = ({
                 leaderboard[1].creatorId === currentUserId ? 'is-me' : ''
               }`}
             >
-              <div className="podium-medal">🥈</div>
-              <div className="podium-rank">#2 Contender</div>
+              <div className="podium-rank-tag">#2 Contender</div>
               <div className="podium-name" title={leaderboard[1].name}>
                 {leaderboard[1].name}
               </div>
@@ -77,9 +74,10 @@ export const CreativeLeaderboardTable = ({
                 leaderboard[0].creatorId === currentUserId ? 'is-me' : ''
               }`}
             >
-              <div className="podium-crown">👑</div>
-              <div className="podium-medal">🥇</div>
-              <div className="podium-rank">#1 Champion</div>
+              <div className="podium-rank-tag">
+                <Trophy size={13} style={{ marginRight: '4px' }} />
+                #1 Champion
+              </div>
               <div className="podium-name" title={leaderboard[0].name}>
                 {leaderboard[0].name}
               </div>
@@ -99,8 +97,7 @@ export const CreativeLeaderboardTable = ({
                 leaderboard[2].creatorId === currentUserId ? 'is-me' : ''
               }`}
             >
-              <div className="podium-medal">🥉</div>
-              <div className="podium-rank">#3 Finalist</div>
+              <div className="podium-rank-tag">#3 Finalist</div>
               <div className="podium-name" title={leaderboard[2].name}>
                 {leaderboard[2].name}
               </div>
@@ -115,7 +112,7 @@ export const CreativeLeaderboardTable = ({
         </div>
       )}
 
-      {/* Full Leaderboard Table - Columns EXACTLY: Rank, Name, Creatives, Winners, Avg Score, Total Points */}
+      {/* Full Leaderboard Table - Columns: Rank, Name, Creatives, Winners, Avg Score, Total Points */}
       <div className="table-card">
         {leaderboard.length > 0 ? (
           <div className="table-scroll-wrapper">
@@ -137,7 +134,7 @@ export const CreativeLeaderboardTable = ({
                     <tr key={item.creatorId} className={`${isMe ? 'highlight-row' : ''}`}>
                       <td className="rank-cell">
                         <span className={`rank-badge ${getRankBadgeClass(item.rank)}`}>
-                          {getRankIcon(item.rank)}
+                          {getRankLabel(item.rank)}
                         </span>
                       </td>
 
@@ -178,9 +175,11 @@ export const CreativeLeaderboardTable = ({
           </div>
         ) : (
           <div className="empty-leaderboard">
-            <div className="empty-icon">🎨</div>
+            <div className="empty-icon-wrap">
+              <Trophy size={28} />
+            </div>
             <h4>No Creative Records Yet</h4>
-            <p>Be the first to submit a creative performance and claim the top rank!</p>
+            <p>Be the first to submit a creative performance and claim the top rank.</p>
           </div>
         )}
       </div>

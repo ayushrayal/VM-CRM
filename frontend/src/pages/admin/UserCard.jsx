@@ -15,14 +15,28 @@ export const UserCard = ({ user, onDeleteClick, onRoleClick, isCurrentAdmin }) =
     });
   };
 
+  const getInitials = (name) => {
+    if (!name) return 'U';
+    return name
+      .split(' ')
+      .filter(Boolean)
+      .map((n) => n[0])
+      .join('')
+      .toUpperCase()
+      .substring(0, 2);
+  };
+
   const isTeam = user.role === 'team';
 
   return (
     <div className="user-card">
       <div className="card-header">
-        <div className="card-user-info">
-          <h3 className="user-name">{user.name}</h3>
-          <span className="user-email">{user.email}</span>
+        <div className="card-identity-group">
+          <div className="user-avatar-circle">{getInitials(user.name)}</div>
+          <div className="card-user-info">
+            <h3 className="user-name">{user.name}</h3>
+            <span className="user-email">{user.email}</span>
+          </div>
         </div>
         <div className="card-badges">
           <Badge variant={user.role}>{user.role}</Badge>
@@ -31,7 +45,7 @@ export const UserCard = ({ user, onDeleteClick, onRoleClick, isCurrentAdmin }) =
       </div>
 
       <div className="card-meta">
-        <span className="meta-label">Joined:</span>
+        <span className="meta-label">Joined</span>
         <span className="meta-value">{formatDate(user.createdAt)}</span>
       </div>
 

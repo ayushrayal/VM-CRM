@@ -1,0 +1,63 @@
+@use '../../styles/variables' as *;
+@use '../../styles/mixins' as *;
+
+.page-header-container {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1.25rem;
+  margin-bottom: 1.75rem;
+  flex-wrap: wrap;
+
+  .header-text-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    max-width: 780px;
+
+    .header-title-row {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      flex-wrap: wrap;
+
+      .header-title {
+        font-family: $font-heading;
+        font-size: 1.75rem; // ~28px
+        font-weight: 700;
+        letter-spacing: -0.025em;
+        color: $color-text-primary;
+        margin: 0;
+        line-height: 1.2;
+
+        @include mobile {
+          font-size: 1.5rem;
+        }
+      }
+
+      .header-badge {
+        display: inline-flex;
+        align-items: center;
+      }
+    }
+
+    .header-description {
+      font-size: 0.875rem; // 14px
+      color: $color-text-secondary;
+      margin: 0;
+      line-height: 1.45;
+    }
+  }
+
+  .header-actions-group {
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
+    flex-wrap: wrap;
+
+    @include mobile {
+      width: 100%;
+      justify-content: flex-start;
+    }
+  }
+}

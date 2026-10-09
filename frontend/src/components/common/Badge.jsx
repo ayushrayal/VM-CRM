@@ -1,11 +1,16 @@
 import React from 'react';
 import './Badge.scss';
 
-export const Badge = ({ children, variant = 'pending', className = '' }) => {
-  // variants: 'active', 'pending', 'rejected', 'admin', 'team'
+export const Badge = ({
+  children,
+  variant = 'pending',
+  withDot = false,
+  className = ''
+}) => {
+  // variants: 'active', 'pending', 'rejected', 'admin', 'team', 'warning', 'info', 'success', 'danger'
   return (
     <span className={`badge badge-${variant} ${className}`}>
-      <span className="badge-dot" />
+      {withDot && <span className="badge-dot" />}
       {children}
     </span>
   );

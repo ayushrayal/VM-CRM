@@ -3,7 +3,7 @@
 .cro-leaderboard-container {
   display: flex;
   flex-direction: column;
-  gap: 1.5rem;
+  gap: 1.25rem;
 
   .leaderboard-header-row {
     display: flex;
@@ -13,33 +13,33 @@
     gap: 1rem;
 
     .leaderboard-title {
-      font-family: $font-heading;
-      font-size: 1.25rem;
-      font-weight: 800;
+      font-size: 1.125rem;
+      font-weight: 700;
       color: $color-text-primary;
-      margin: 0 0 4px 0;
+      margin: 0 0 2px 0;
+      letter-spacing: -0.01em;
     }
 
     .leaderboard-subtitle {
-      font-size: 0.875rem;
+      font-size: 0.8125rem;
       color: $color-text-secondary;
       margin: 0;
     }
 
     .period-tabs {
-      display: flex;
-      background: #E5E7EB;
+      display: inline-flex;
+      background: #EAEAE4;
       padding: 3px;
       border-radius: $radius-md;
-      gap: 4px;
+      gap: 2px;
 
       .period-btn {
         background: transparent;
         border: none;
-        padding: 6px 14px;
+        padding: 5px 12px;
         font-family: $font-body;
-        font-size: 0.8125rem;
-        font-weight: 600;
+        font-size: 0.75rem;
+        font-weight: 500;
         color: $color-text-secondary;
         border-radius: $radius-sm;
         cursor: pointer;
@@ -48,7 +48,8 @@
         &.active {
           background: #FFFFFF;
           color: $color-text-primary;
-          box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+          font-weight: 600;
+          box-shadow: $shadow-xs;
         }
 
         &:hover:not(.active) {
@@ -63,57 +64,52 @@
     display: grid;
     grid-template-columns: repeat(3, 1fr);
     gap: 1rem;
-    align-items: flex-end;
-    margin: 0.5rem 0;
+    align-items: stretch;
+    margin: 0.25rem 0;
 
     @media (max-width: 720px) {
       grid-template-columns: 1fr;
     }
 
     .podium-card {
-      background: #FFFFFF;
+      background: $color-card-bg;
       border: 1px solid $color-border;
-      border-radius: $radius-lg;
+      border-radius: $radius-md;
       padding: 1.25rem 1rem;
       text-align: center;
       display: flex;
       flex-direction: column;
       align-items: center;
       position: relative;
-      transition: transform $transition-fast;
+      box-shadow: $shadow-xs;
+      transition: border-color $transition-fast;
 
       &:hover {
-        transform: translateY(-2px);
+        border-color: $color-border-hover;
       }
 
       &.is-me {
-        border-color: $color-warm-orange;
-        box-shadow: 0 0 0 2px rgba($color-warm-orange, 0.2);
+        border-color: $color-pure-black;
+        background-color: $color-surface-hover;
       }
 
-      .podium-medal {
-        font-size: 2rem;
-        margin-bottom: 4px;
-      }
-
-      .podium-crown {
-        position: absolute;
-        top: -14px;
-        font-size: 1.5rem;
-      }
-
-      .podium-rank {
-        font-size: 0.75rem;
-        font-weight: 700;
+      .podium-rank-tag {
+        display: inline-flex;
+        align-items: center;
+        padding: 3px 8px;
+        font-size: 0.6875rem;
+        font-weight: 600;
+        letter-spacing: 0.02em;
         text-transform: uppercase;
-        letter-spacing: 0.05em;
-        margin-bottom: 4px;
+        border-radius: $radius-sm;
+        margin-bottom: 0.75rem;
+        background: $color-surface-hover;
+        color: $color-text-secondary;
       }
 
       .podium-name {
-        font-family: $font-heading;
-        font-size: 1rem;
-        font-weight: 800;
+        font-size: 0.9375rem;
+        font-weight: 600;
         color: $color-text-primary;
         margin-bottom: 4px;
         white-space: nowrap;
@@ -123,11 +119,11 @@
       }
 
       .podium-points {
-        font-family: $font-heading;
         font-size: 1.25rem;
-        font-weight: 900;
-        color: #15803D;
-        margin-bottom: 6px;
+        font-weight: 700;
+        color: $color-success;
+        letter-spacing: -0.01em;
+        margin-bottom: 4px;
       }
 
       .podium-stats {
@@ -136,30 +132,27 @@
       }
 
       &.rank-1 {
-        background: linear-gradient(180deg, #FEFCE8 0%, #FFFFFF 100%);
-        border-color: #FDE047;
-        padding-top: 1.75rem;
+        border-color: $color-lemon-yellow;
+        background-color: #FEFDF5;
 
-        .podium-rank {
-          color: #A16207;
+        .podium-rank-tag {
+          background-color: $color-lemon-yellow;
+          color: $color-pure-black;
+          font-weight: 700;
         }
       }
 
       &.rank-2 {
-        background: linear-gradient(180deg, #F8FAFC 0%, #FFFFFF 100%);
-        border-color: #CBD5E1;
-
-        .podium-rank {
-          color: #475569;
+        .podium-rank-tag {
+          background-color: #F1F1ED;
+          color: $color-text-primary;
         }
       }
 
       &.rank-3 {
-        background: linear-gradient(180deg, #FFF7ED 0%, #FFFFFF 100%);
-        border-color: #FDBA74;
-
-        .podium-rank {
-          color: #C2410C;
+        .podium-rank-tag {
+          background-color: #F6F6F2;
+          color: $color-text-secondary;
         }
       }
     }
@@ -167,10 +160,11 @@
 
   /* Table Card & Scroll Wrapper */
   .table-card {
-    background: #FFFFFF;
+    background: $color-card-bg;
     border: 1px solid $color-border;
-    border-radius: $radius-lg;
+    border-radius: $radius-md;
     overflow: hidden;
+    box-shadow: $shadow-xs;
 
     .table-scroll-wrapper {
       width: 100%;
@@ -183,21 +177,21 @@
       min-width: 740px;
       border-collapse: collapse;
       text-align: left;
-      font-size: 0.875rem;
+      font-size: 0.8125rem;
 
       th {
         background: $color-bg;
-        padding: 0.75rem 1rem;
+        padding: 0.65rem 1rem;
         font-size: 0.75rem;
-        font-weight: 700;
+        font-weight: 600;
         text-transform: uppercase;
-        letter-spacing: 0.05em;
+        letter-spacing: 0.04em;
         color: $color-text-secondary;
         border-bottom: 1px solid $color-border;
         white-space: nowrap;
 
         &.col-rank {
-          width: 70px;
+          width: 60px;
         }
         &.col-participant {
           min-width: 200px;
@@ -215,13 +209,13 @@
           min-width: 100px;
         }
         &.col-badges {
-          min-width: 120px;
+          min-width: 140px;
         }
       }
 
       td {
-        padding: 0.875rem 1rem;
-        border-bottom: 1px solid #F3F4F6;
+        padding: 0.75rem 1rem;
+        border-bottom: 1px solid $color-border;
         vertical-align: middle;
       }
 
@@ -229,8 +223,12 @@
         border-bottom: none;
       }
 
+      tr:hover {
+        background-color: $color-surface-hover;
+      }
+
       tr.highlight-row {
-        background: #FEF9C3;
+        background-color: #FEFDF0;
       }
 
       .rank-cell {
@@ -238,14 +236,18 @@
           display: inline-flex;
           align-items: center;
           justify-content: center;
-          font-weight: 800;
-          font-size: 0.875rem;
+          font-weight: 600;
+          font-size: 0.8125rem;
           color: $color-text-secondary;
+          min-width: 28px;
+          height: 24px;
+          border-radius: $radius-sm;
+          background: $color-surface-hover;
 
-          &.rank-1,
-          &.rank-2,
-          &.rank-3 {
-            font-size: 1.25rem;
+          &.rank-1 {
+            background-color: $color-lemon-yellow;
+            color: $color-pure-black;
+            font-weight: 700;
           }
         }
       }
@@ -257,17 +259,17 @@
           gap: 10px;
 
           .avatar-circle {
-            width: 32px;
-            height: 32px;
+            width: 28px;
+            height: 28px;
             border-radius: 50%;
-            background: $color-lemon-yellow;
-            color: $color-pure-black;
-            font-weight: 800;
-            font-size: 0.8125rem;
+            background: $color-surface-hover;
+            color: $color-text-primary;
+            font-weight: 600;
+            font-size: 0.75rem;
             display: flex;
             align-items: center;
             justify-content: center;
-            border: 1px solid rgba(0, 0, 0, 0.1);
+            border: 1px solid $color-border;
             flex-shrink: 0;
           }
 
@@ -276,25 +278,25 @@
             flex-direction: column;
 
             .user-name {
-              font-weight: 700;
+              font-weight: 600;
               color: $color-text-primary;
               display: flex;
               align-items: center;
               gap: 6px;
 
               .you-pill {
-                font-size: 0.65rem;
-                font-weight: 700;
-                background: #111827;
+                font-size: 0.625rem;
+                font-weight: 600;
+                background: $color-pure-black;
                 color: #FFFFFF;
-                padding: 1px 6px;
+                padding: 1px 5px;
                 border-radius: $radius-full;
                 text-transform: uppercase;
               }
             }
 
             .user-meta {
-              font-size: 0.75rem;
+              font-size: 0.6875rem;
               color: $color-text-muted;
               text-transform: capitalize;
             }
@@ -304,25 +306,24 @@
 
       .points-cell {
         .points-number {
-          font-family: $font-heading;
-          font-weight: 800;
-          font-size: 0.9375rem;
-          color: #15803D;
+          font-weight: 700;
+          font-size: 0.875rem;
+          color: $color-success;
         }
 
         .points-unit {
-          font-size: 0.75rem;
+          font-size: 0.6875rem;
           color: $color-text-muted;
         }
       }
 
       .num-cell {
-        font-weight: 600;
+        font-weight: 500;
         color: $color-text-primary;
 
         .success-num {
-          color: #15803D;
-          font-weight: 700;
+          color: $color-success;
+          font-weight: 600;
         }
       }
 
@@ -330,11 +331,12 @@
         .rate-pill {
           display: inline-block;
           font-size: 0.75rem;
-          font-weight: 700;
-          padding: 2px 8px;
-          background: #F3F4F6;
-          border-radius: $radius-full;
+          font-weight: 600;
+          padding: 2px 6px;
+          background: $color-surface-hover;
+          border-radius: $radius-sm;
           color: $color-text-secondary;
+          border: 1px solid $color-border;
         }
       }
 
@@ -342,16 +344,18 @@
         .badges-row {
           display: flex;
           align-items: center;
-          gap: 6px;
+          flex-wrap: wrap;
+          gap: 4px;
 
           .badge-bubble {
-            font-size: 1.15rem;
-            cursor: pointer;
-            transition: transform $transition-fast;
-
-            &:hover {
-              transform: scale(1.2);
-            }
+            font-size: 0.6875rem;
+            font-weight: 500;
+            padding: 1px 6px;
+            background: $color-surface-hover;
+            border: 1px solid $color-border;
+            border-radius: $radius-sm;
+            color: $color-text-secondary;
+            white-space: nowrap;
           }
 
           .no-badges {
@@ -368,20 +372,27 @@
       flex-direction: column;
       align-items: center;
 
-      .empty-icon {
-        font-size: 2.5rem;
+      .empty-icon-wrap {
+        width: 44px;
+        height: 44px;
+        border-radius: $radius-md;
+        background: $color-surface-hover;
+        color: $color-text-secondary;
+        display: flex;
+        align-items: center;
+        justify-content: center;
         margin-bottom: 0.75rem;
       }
 
       h4 {
-        font-family: $font-heading;
-        font-size: 1.125rem;
+        font-size: 0.9375rem;
+        font-weight: 600;
         color: $color-text-primary;
-        margin: 0 0 6px 0;
+        margin: 0 0 4px 0;
       }
 
       p {
-        font-size: 0.875rem;
+        font-size: 0.8125rem;
         color: $color-text-secondary;
         margin: 0;
       }

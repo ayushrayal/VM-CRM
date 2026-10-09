@@ -9,6 +9,15 @@ import {
   deleteCreative
 } from '../../api/creative.api';
 import { CREATIVE_STATUSES } from '../../constants/creative.constants';
+import {
+  Trophy,
+  Layers,
+  TrendingUp,
+  Users,
+  Plus,
+  User
+} from 'lucide-react';
+import { PageHeader } from '../../components/common/PageHeader';
 import { CreativeCard } from '../../components/creativeGamiply/CreativeCard';
 import { CreativeDetailModal } from '../../components/creativeGamiply/CreativeDetailModal';
 import { CreativeFormModal } from '../../components/creativeGamiply/CreativeFormModal';
@@ -174,7 +183,7 @@ export const CreativeGamiplyPage = () => {
 
   const filterTabs = [
     { id: 'ALL', label: 'All Creatives' },
-    { id: CREATIVE_STATUSES.WINNER, label: '🏆 Winners' },
+    { id: CREATIVE_STATUSES.WINNER, label: 'Winners' },
     { id: CREATIVE_STATUSES.LIVE, label: 'Live' },
     { id: CREATIVE_STATUSES.TESTING, label: 'Testing' },
     { id: CREATIVE_STATUSES.READY, label: 'Ready' },
@@ -195,37 +204,32 @@ export const CreativeGamiplyPage = () => {
       )}
 
       {/* Header Banner */}
-      <div className="gamiply-header">
-        <div className="header-left">
-          <div className="title-row">
-            <span className="section-badge">CREATIVE PERFORMANCE</span>
-            <h1 className="page-title">Creative Performance</h1>
-          </div>
-          <p className="page-subtitle">
-            Internal creative performance gamification arena. Submit your ad performance, accumulate ROAS improvement points, and compete on the leaderboard.
-          </p>
-        </div>
-
-        <div className="header-actions">
+      <PageHeader
+        title="Creative Performance"
+        description="Internal creative performance analytics. Submit ad performance, track ROAS improvement, and view rankings."
+        actions={
           <Button
             variant="primary"
-            size="lg"
+            size="md"
+            icon={<Plus size={16} />}
             onClick={() => {
               setFormInitialData(null);
               setIsFormOpen(true);
             }}
           >
-            + Add Creative
+            Add Creative
           </Button>
-        </div>
-      </div>
+        }
+      />
 
-      {/* Personal & Global Stats Bar (No badges) */}
+      {/* Personal & Global Stats Bar */}
       {stats && (
         <div className="gamiply-stats-grid">
           {/* User Rank */}
-          <div className="stat-card highlight">
-            <div className="stat-icon">🏆</div>
+          <div className="stat-card">
+            <div className="stat-icon-wrap">
+              <Trophy size={18} strokeWidth={1.75} />
+            </div>
             <div className="stat-content">
               <span className="stat-label">My Creative Rank</span>
               <div className="stat-value-group">
@@ -239,7 +243,9 @@ export const CreativeGamiplyPage = () => {
 
           {/* User Creatives */}
           <div className="stat-card">
-            <div className="stat-icon">🎨</div>
+            <div className="stat-icon-wrap">
+              <Layers size={18} strokeWidth={1.75} />
+            </div>
             <div className="stat-content">
               <span className="stat-label">My Creatives</span>
               <div className="stat-value-group">
@@ -253,7 +259,9 @@ export const CreativeGamiplyPage = () => {
 
           {/* User Average Score */}
           <div className="stat-card">
-            <div className="stat-icon">⚡</div>
+            <div className="stat-icon-wrap">
+              <TrendingUp size={18} strokeWidth={1.75} />
+            </div>
             <div className="stat-content">
               <span className="stat-label">Average Score</span>
               <div className="stat-value-group">
@@ -264,8 +272,10 @@ export const CreativeGamiplyPage = () => {
           </div>
 
           {/* Global Milestone */}
-          <div className="stat-card global-card">
-            <div className="stat-icon">🌐</div>
+          <div className="stat-card">
+            <div className="stat-icon-wrap">
+              <Users size={18} strokeWidth={1.75} />
+            </div>
             <div className="stat-content">
               <span className="stat-label">Team Total Impact</span>
               <div className="stat-value-group">
@@ -287,13 +297,13 @@ export const CreativeGamiplyPage = () => {
           className={`nav-tab-btn ${activeTab === 'creatives' ? 'active' : ''}`}
           onClick={() => setActiveTab('creatives')}
         >
-          🎨 Creatives ({creatives.length})
+          Creatives ({creatives.length})
         </button>
         <button
           className={`nav-tab-btn ${activeTab === 'leaderboard' ? 'active' : ''}`}
           onClick={() => setActiveTab('leaderboard')}
         >
-          🏆 Leaderboard
+          Leaderboard
         </button>
       </div>
 
@@ -308,7 +318,8 @@ export const CreativeGamiplyPage = () => {
                 className={`filter-pill ${mineOnly ? 'active-mine' : ''}`}
                 onClick={() => setMineOnly(!mineOnly)}
               >
-                👤 Mine Only
+                <User size={13} style={{ marginRight: '4px', verticalAlign: 'text-bottom' }} />
+                Mine Only
               </button>
 
               <div className="filters-divider" />
@@ -361,23 +372,26 @@ export const CreativeGamiplyPage = () => {
             </div>
           ) : (
             <div className="creative-empty-state">
-              <span className="empty-icon">🎨</span>
+              <div className="empty-icon-wrap">
+                <Layers size={28} />
+              </div>
               <h3>No creative performance entries found</h3>
               <p>
                 {mineOnly
-                  ? "You haven't submitted any creative performance entries yet. Click '+ Add Creative' to get started!"
+                  ? "You haven't submitted any creative performance entries yet. Click 'Add Creative' to get started."
                   : statusFilter !== 'ALL'
                   ? `No creatives currently in status '${statusFilter}'.`
                   : 'No creatives submitted yet. Be the first to add your creative performance!'}
               </p>
               <Button
                 variant="primary"
+                icon={<Plus size={15} />}
                 onClick={() => {
                   setFormInitialData(null);
                   setIsFormOpen(true);
                 }}
               >
-                + Add First Creative
+                Add First Creative
               </Button>
             </div>
           )}
@@ -447,7 +461,7 @@ export const CreativeGamiplyPage = () => {
             <strong>"{deleteTarget?.adName}"</strong> ({deleteTarget?.clientName})?
           </p>
           <p className="delete-warning">
-            ⚠️ This will remove the creative record and deduct {deleteTarget?.score?.totalPoints || 0} score points from the creator.
+            This will remove the creative record and deduct {deleteTarget?.score?.totalPoints || 0} score points from the creator.
           </p>
 
           <div className="delete-actions">

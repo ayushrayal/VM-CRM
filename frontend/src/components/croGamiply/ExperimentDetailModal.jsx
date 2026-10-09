@@ -3,6 +3,7 @@ import { Modal } from '../common/Modal';
 import { Button } from '../common/Button';
 import { CRO_STATUS_CONFIG, CRO_BADGES } from '../../constants/cro.constants';
 import { resolveImageUrl } from '../../utils/imageUrl';
+import { Image, DollarSign, CreditCard, Award } from 'lucide-react';
 import './ExperimentDetailModal.scss';
 
 export const ExperimentDetailModal = ({
@@ -196,7 +197,6 @@ export const ExperimentDetailModal = ({
                 {/* Before Column */}
                 <div className="gallery-column">
                   <div className="column-header before">
-                    <span className="col-icon">📸</span>
                     <span className="col-title">Before Screenshots ({beforeImages.length})</span>
                   </div>
 
@@ -235,7 +235,6 @@ export const ExperimentDetailModal = ({
                 {/* After Column */}
                 <div className="gallery-column">
                   <div className="column-header after">
-                    <span className="col-icon">✨</span>
                     <span className="col-title">After Screenshots ({afterImages.length})</span>
                   </div>
 
@@ -290,7 +289,7 @@ export const ExperimentDetailModal = ({
                     {/* 1. Sales */}
                     <tr>
                       <td className="metric-name">
-                        <span className="metric-icon">💰</span> Product Sales
+                        <DollarSign size={14} className="metric-icon" style={{ verticalAlign: 'text-bottom', marginRight: '4px' }} /> Product Sales
                       </td>
                       <td className="num-val">{formatCurrency(results.salesBefore)}</td>
                       <td className="num-val">{formatCurrency(results.salesAfter)}</td>
@@ -314,7 +313,7 @@ export const ExperimentDetailModal = ({
                     {/* 2. Prepaid */}
                     <tr>
                       <td className="metric-name">
-                        <span className="metric-icon">💳</span> Prepaid Orders %
+                        <CreditCard size={14} className="metric-icon" style={{ verticalAlign: 'text-bottom', marginRight: '4px' }} /> Prepaid Orders %
                       </td>
                       <td className="num-val">{formatPercent(results.prepaidBefore)}</td>
                       <td className="num-val">{formatPercent(results.prepaidAfter)}</td>
@@ -359,10 +358,10 @@ export const ExperimentDetailModal = ({
                 <h4 className="section-title">Badges & Recognition</h4>
                 <div className="badges-list">
                   {badges.map((bId) => {
-                    const bDef = CRO_BADGES[bId] || { name: bId, icon: '🏅', desc: '' };
+                    const bDef = CRO_BADGES[bId] || { name: bId, icon: '', desc: '' };
                     return (
                       <div key={bId} className="badge-card">
-                        <span className="badge-icon">{bDef.icon}</span>
+                        <span className="badge-icon"><Award size={15} /></span>
                         <div className="badge-text">
                           <span className="badge-name">{bDef.name}</span>
                           <span className="badge-desc">{bDef.desc}</span>

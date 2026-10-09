@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { getClients } from '../../api/client.api';
 import { getStreamUrl } from '../../api/axios';
+import { Building2 } from 'lucide-react';
 import './ClientSelect.scss';
 
 export const ClientSelect = ({
@@ -152,7 +153,7 @@ export const ClientSelect = ({
       >
         {selectedClient ? (
           <div className="client-selected-display">
-            <span className="client-badge-icon">🏢</span>
+            <span className="client-badge-icon"><Building2 size={13} /></span>
             <span className="client-name-text">
               {selectedClient.clientName || selectedClient.name}
             </span>

@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { formatDateTime, formatDate, formatTime, toInputDateTimeLocalFormat } from '../../../utils/dateUtils';
 import { Button } from '../../../components/common/Button';
+import { AlertCircle } from 'lucide-react';
 import './EditAssignmentModal.scss';
 
 const STAGE_OPTIONS = [
@@ -254,7 +255,7 @@ export const EditAssignmentModal = ({
         <form onSubmit={handleSave} className="modal-body">
           {errorMessage && (
             <div className="edit-error-banner">
-              ⚠️ {errorMessage}
+              <AlertCircle size={14} style={{ marginRight: '6px' }} /> {errorMessage}
             </div>
           )}
 
@@ -322,7 +323,7 @@ export const EditAssignmentModal = ({
                     .filter((u) => u.role === 'admin')
                     .map((u) => (
                       <option key={u._id} value={u._id}>
-                        ★ {u.name} (Admin / Final Approver)
+                        {u.name} (Admin / Final Approver)
                       </option>
                     ))}
                 </optgroup>
@@ -590,11 +591,11 @@ export const EditAssignmentModal = ({
                   {launchDateTimeStr && customDueDateTimeStr && (
                     new Date(customDueDateTimeStr).getTime() <= new Date(launchDateTimeStr).getTime() ? (
                       <span className="date-error-text">
-                        ❌ Report due time must be AFTER launch date and time.
+                        Report due time must be AFTER launch date and time.
                       </span>
                     ) : (
                       <span className="date-info-text">
-                        ✓ Observation Period: {effectiveDurationHours.toFixed(1)} hours
+                        Observation Period: {effectiveDurationHours.toFixed(1)} hours
                       </span>
                     )
                   )}

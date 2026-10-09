@@ -2,72 +2,29 @@
 @use '../../styles/variables' as *;
 
 .projections-page-container {
-  padding: 24px;
-  max-width: 1440px;
-  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
 
   .projection-toast-banner {
-    padding: 12px 16px;
+    padding: 0.75rem 1rem;
     border-radius: $radius-md;
-    margin-bottom: 20px;
+    font-size: 0.8125rem;
     font-weight: 500;
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 0.5rem;
 
     &.success {
       background: $color-success-bg;
-      color: $color-success-text;
+      color: $color-success;
       border: 1px solid $color-success-border;
     }
 
     &.error {
       background: $color-danger-bg;
-      color: $color-danger-text;
+      color: $color-danger;
       border: 1px solid $color-danger-border;
-    }
-  }
-
-  .projections-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
-    margin-bottom: 24px;
-    flex-wrap: wrap;
-    gap: 16px;
-
-    .header-left {
-      .title-row {
-        display: flex;
-        align-items: center;
-        gap: 12px;
-        margin-bottom: 6px;
-
-        .section-badge {
-          background: $color-soft-ivory;
-          color: $color-olive-charcoal;
-          font-size: 0.72rem;
-          font-weight: 700;
-          letter-spacing: 0.05em;
-          padding: 3px 8px;
-          border-radius: $radius-sm;
-          border: 1px solid color.adjust($color-soft-ivory, $lightness: -8%);
-        }
-
-        .page-title {
-          font-family: $font-heading;
-          font-size: 1.8rem;
-          font-weight: 700;
-          color: $color-text-primary;
-          margin: 0;
-        }
-      }
-
-      .page-subtitle {
-        color: $color-text-secondary;
-        font-size: 0.92rem;
-        margin: 0;
-      }
     }
   }
 
@@ -253,6 +210,8 @@
     border: 1px solid $color-border;
     border-radius: $radius-md;
     overflow-x: auto;
+    max-width: 100%;
+    -webkit-overflow-scrolling: touch;
 
     .projections-table {
       width: 100%;
@@ -272,6 +231,10 @@
           font-size: 0.78rem;
           text-transform: uppercase;
           letter-spacing: 0.04em;
+
+          &.th-num {
+            text-align: right;
+          }
 
           &.th-action {
             text-align: right;
@@ -323,6 +286,7 @@
             &.num-cell {
               font-family: $font-body;
               font-variant-numeric: tabular-nums;
+              text-align: right;
 
               &.highlight-actual {
                 font-weight: 600;

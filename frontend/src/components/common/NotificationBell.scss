@@ -1,0 +1,245 @@
+@use '../../styles/variables' as *;
+
+.notification-bell-container {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
+
+  .notification-bell-btn {
+    width: 38px;
+    height: 38px;
+    min-width: 38px;
+    min-height: 38px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+    border: 1px solid $color-border;
+    border-radius: $radius-sm;
+    color: $color-text-primary;
+    cursor: pointer;
+    position: relative;
+    transition: background-color $transition-fast, border-color $transition-fast;
+    flex-shrink: 0;
+
+    &:hover {
+      background-color: $color-surface-hover;
+      border-color: $color-border-hover;
+    }
+
+    .notification-count-badge {
+      position: absolute;
+      top: -4px;
+      right: -4px;
+      background-color: $color-lemon-yellow;
+      color: $color-pure-black;
+      font-weight: 700;
+      font-size: 0.65rem;
+      height: 16px;
+      min-width: 16px;
+      padding: 0 4px;
+      border-radius: $radius-full;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: 2px solid $color-pure-white;
+      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+      line-height: 1;
+    }
+  }
+
+  .notification-popover {
+    position: absolute;
+    top: calc(100% + 8px);
+    right: 0;
+    width: 360px;
+    max-width: min(360px, calc(100vw - 24px));
+    background-color: $color-card-bg;
+    border: 1px solid $color-border;
+    border-radius: $radius-lg;
+    box-shadow: $shadow-lg;
+    z-index: 1000;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    animation: popoverSlideUp 0.15s cubic-bezier(0.16, 1, 0.3, 1);
+
+    @media (max-width: 480px) {
+      right: -48px;
+      width: calc(100vw - 24px);
+    }
+
+    .popover-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0.75rem 1rem;
+      border-bottom: 1px solid $color-border-subtle;
+      background-color: $color-surface-subtle;
+
+      .header-title-group {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+
+        .popover-title {
+          font-weight: 600;
+          font-size: 0.875rem;
+          color: $color-text-primary;
+        }
+
+        .new-count-pill {
+          background-color: rgba(0, 0, 0, 0.06);
+          color: $color-text-primary;
+          font-weight: 600;
+          font-size: 0.6875rem;
+          padding: 1px 6px;
+          border-radius: $radius-full;
+        }
+      }
+
+      .mark-all-btn {
+        background: none;
+        border: none;
+        color: $color-text-secondary;
+        font-size: 0.75rem;
+        font-weight: 500;
+        cursor: pointer;
+        padding: 0;
+
+        &:hover {
+          color: $color-text-primary;
+          text-decoration: underline;
+        }
+      }
+    }
+
+    .notifications-list-container {
+      max-height: 380px;
+      overflow-y: auto;
+
+      .notifications-loading {
+        padding: 2rem;
+        text-align: center;
+        color: $color-text-muted;
+        font-size: 0.8125rem;
+      }
+
+      .notifications-empty {
+        padding: 2.5rem 1rem;
+        text-align: center;
+
+        .empty-icon {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          width: 36px;
+          height: 36px;
+          border-radius: 50%;
+          background-color: $color-surface-hover;
+          color: $color-text-muted;
+          margin-bottom: 0.5rem;
+        }
+
+        .empty-title {
+          font-weight: 600;
+          color: $color-text-primary;
+          font-size: 0.875rem;
+        }
+
+        .empty-desc {
+          color: $color-text-muted;
+          font-size: 0.75rem;
+          margin-top: 2px;
+        }
+      }
+
+      .notification-item {
+        padding: 0.75rem 1rem;
+        border-bottom: 1px solid $color-border-subtle;
+        background-color: $color-card-bg;
+        cursor: pointer;
+        transition: background-color $transition-fast;
+        display: flex;
+        gap: 0.65rem;
+        align-items: flex-start;
+
+        &:last-child {
+          border-bottom: none;
+        }
+
+        &:hover {
+          background-color: $color-surface-hover;
+        }
+
+        &.is-unread {
+          background-color: #FDFAF2;
+        }
+
+        .unread-indicator-dot {
+          width: 6px;
+          height: 6px;
+          border-radius: 50%;
+          background-color: $color-lemon-yellow;
+          margin-top: 6px;
+          flex-shrink: 0;
+          border: 1px solid #D6CA00;
+
+          &.read {
+            background-color: transparent;
+            border-color: transparent;
+          }
+        }
+
+        .item-content {
+          flex: 1;
+          min-width: 0;
+
+          .item-header-row {
+            display: flex;
+            align-items: baseline;
+            justify-content: space-between;
+            gap: 0.65rem;
+
+            .item-title {
+              font-size: 0.8125rem;
+              font-weight: 600;
+              color: $color-text-primary;
+              white-space: nowrap;
+              overflow: hidden;
+              text-overflow: ellipsis;
+              flex: 1;
+              min-width: 0;
+            }
+
+            .item-timestamp {
+              font-size: 0.6875rem;
+              color: $color-text-muted;
+              flex-shrink: 0;
+              white-space: nowrap;
+            }
+          }
+
+          .item-message {
+            font-size: 0.75rem;
+            color: $color-text-secondary;
+            margin-top: 2px;
+            line-height: 1.4;
+          }
+        }
+      }
+    }
+  }
+}
+
+@keyframes popoverSlideUp {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}

@@ -11,6 +11,7 @@ import {
 import { calculateLiveScore } from '../../utils/croScoring';
 import { resolveImageUrl } from '../../utils/imageUrl';
 import { ClientSelect } from '../common/ClientSelect';
+import { DollarSign, CreditCard } from 'lucide-react';
 import './ExperimentFormModal.scss';
 
 const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
@@ -472,7 +473,6 @@ export const ExperimentFormModal = ({
               <div className="screenshot-uploader-card">
                 <div className="card-top-bar">
                   <div className="card-title-group">
-                    <span className="icon">📸</span>
                     <span className="name">Before Screenshots</span>
                     <span className="count-badge">{formData.beforeImages.length}</span>
                   </div>
@@ -577,7 +577,6 @@ export const ExperimentFormModal = ({
               <div className="screenshot-uploader-card">
                 <div className="card-top-bar">
                   <div className="card-title-group">
-                    <span className="icon">✨</span>
                     <span className="name">After Screenshots</span>
                     <span className="count-badge">{formData.afterImages.length}</span>
                   </div>
@@ -692,7 +691,7 @@ export const ExperimentFormModal = ({
               {/* Metric Card 1: Product Sales */}
               <div className="metric-card">
                 <div className="metric-card-header">
-                  <span className="metric-icon">💰</span>
+                  <DollarSign size={14} className="metric-icon" style={{ verticalAlign: 'text-bottom', marginRight: '4px' }} />
                   <span className="metric-title">Product Sales (₹)</span>
                 </div>
 
@@ -749,7 +748,7 @@ export const ExperimentFormModal = ({
               {/* Metric Card 2: Prepaid Orders */}
               <div className="metric-card">
                 <div className="metric-card-header">
-                  <span className="metric-icon">💳</span>
+                  <CreditCard size={14} className="metric-icon" style={{ verticalAlign: 'text-bottom', marginRight: '4px' }} />
                   <span className="metric-title">Prepaid Orders (%)</span>
                 </div>
 
@@ -812,7 +811,7 @@ export const ExperimentFormModal = ({
             <div className="section-header">
               <span className="section-number">5</span>
               <h4 className="section-title">Estimated Score</h4>
-              <span className="server-notice">⚡ +1 pt for Product Sales & +1 pt for Prepaid Orders % (Max 2 pts)</span>
+              <span className="server-notice">+1 pt for Product Sales & +1 pt for Prepaid Orders % (Max 2 pts)</span>
             </div>
 
             <div className="estimated-score-card">

@@ -1,43 +1,91 @@
+// ==============================================================================
+// Vytalis Media CRM — Apple-Inspired Premium Design System Tokens
+// ==============================================================================
+
 // Primary Brand Colors
-$color-lemon-yellow: #F2EA1A;
+$color-lemon-yellow: #F5E900;
+$color-brand-accent: #F5E900;
 $color-pure-white: #FFFFFF;
-$color-pure-black: #000000;
+$color-pure-black: #171717;
 
-// Secondary Brand Colors
-$color-warm-orange: #E75F2A;
-$color-soft-ivory: #EAEADC;
-$color-olive-charcoal: #393A31;
-
-// Neutral UI Colors
-$color-bg: #FAFAF7;
+// Neutral Surfaces & Backgrounds
+$color-bg: #F7F7F5;
 $color-card-bg: #FFFFFF;
-$color-border: #E5E5DC;
-$color-text-primary: #1A1A1A;
-$color-text-secondary: #5A5B52;
-$color-text-muted: #8C8D82;
+$color-surface-hover: #F2F2EE;
+$color-surface-subtle: #FAFAF8;
 
-// Functional Feedback Colors
+// Borders & Dividers
+$color-border: #E8E8E2;
+$color-border-subtle: #F0F0EB;
+$color-border-hover: #D6D6CE;
+
+// Text Hierarchy
+$color-text-primary: #171717;
+$color-text-secondary: #6B6C65;
+$color-text-muted: #8E9088;
+$color-text-tertiary: #A8AAA1;
+
+// Semantic Status Colors (Restrained, subtle)
+$color-success: #15803D;
 $color-success-bg: #F0FDF4;
-$color-success-border: #BBF7D0;
-$color-success-text: #166534;
+$color-success-border: #DCFCE7;
+$color-success-text: #15803D;
 
+$color-warning: #B45309;
+$color-warning-bg: #FFFBEB;
+$color-warning-border: #FEF3C7;
+$color-warning-text: #B45309;
+
+$color-danger: #B91C1C;
 $color-danger-bg: #FEF2F2;
-$color-danger-border: #FECACA;
-$color-danger-text: #991B1B;
+$color-danger-border: #FEE2E2;
+$color-danger-text: #B91C1C;
 
 $color-pending-bg: #FFFBEB;
-$color-pending-border: #FDE68A;
-$color-pending-text: #92400E;
+$color-pending-border: #FEF3C7;
+$color-pending-text: #B45309;
+
+$color-info: #2563EB;
+$color-info-bg: #EFF6FF;
+$color-info-border: #DBEAFE;
+$color-info-text: #1D4ED8;
+
+// Legacy compatibility aliases
+$color-warm-orange: #C2410C;
+$color-soft-ivory: #F2F2EC;
+$color-olive-charcoal: #3D3E35;
 
 // Typography Tokens
-$font-heading: 'Bricolage Grotesque', sans-serif;
-$font-body: 'Outfit', sans-serif;
+$font-sans: -apple-system, BlinkMacSystemFont, 'Inter', 'Outfit', system-ui, sans-serif;
+$font-heading: -apple-system, BlinkMacSystemFont, 'Inter', 'Outfit', system-ui, sans-serif;
+$font-body: -apple-system, BlinkMacSystemFont, 'Inter', 'Outfit', system-ui, sans-serif;
+$font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
 
-// Radii & Transitions
+// Type Scale
+$font-size-xs: 0.75rem;    // 12px
+$font-size-sm: 0.8125rem;  // 13px
+$font-size-base: 0.875rem; // 14px
+$font-size-md: 0.9375rem;  // 15px
+$font-size-lg: 1rem;       // 16px
+$font-size-xl: 1.125rem;   // 18px
+$font-size-2xl: 1.375rem;  // 22px
+$font-size-3xl: 1.75rem;   // 28px
+
+// Radii Tokens
+$radius-xs: 4px;
 $radius-sm: 6px;
-$radius-md: 10px;
-$radius-lg: 16px;
+$radius-md: 8px;
+$radius-lg: 12px;
+$radius-xl: 16px;
 $radius-full: 9999px;
 
-$transition-fast: 0.15s ease;
-$transition-normal: 0.25s ease;
+// Shadows (Apple-inspired subtle elevation)
+$shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.03);
+$shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.04), 0 1px 2px rgba(0, 0, 0, 0.02);
+$shadow-md: 0 4px 12px rgba(0, 0, 0, 0.05), 0 1px 2px rgba(0, 0, 0, 0.02);
+$shadow-lg: 0 10px 24px rgba(0, 0, 0, 0.06), 0 2px 6px rgba(0, 0, 0, 0.03);
+$shadow-modal: 0 20px 48px rgba(0, 0, 0, 0.12), 0 4px 12px rgba(0, 0, 0, 0.04);
+
+// Transitions
+$transition-fast: 0.15s cubic-bezier(0.16, 1, 0.3, 1);
+$transition-normal: 0.2s cubic-bezier(0.16, 1, 0.3, 1);

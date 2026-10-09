@@ -265,7 +265,13 @@
 .workspace-content-area {
   flex: 1;
   padding: 20px 32px;
-  overflow-x: auto;
+  max-width: 100%;
+  box-sizing: border-box;
+  overflow-x: hidden;
+
+  @media (max-width: 768px) {
+    padding: 16px;
+  }
 }
 
 .workspace-loading-state {
@@ -280,12 +286,14 @@
   border: 1px solid #E5E5DC;
   border-radius: 8px;
   overflow-x: auto;
+  max-width: 100%;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+  -webkit-overflow-scrolling: touch;
 }
 
 .workflow-table {
   width: 100%;
-  min-width: 980px;
+  min-width: 1240px;
   border-collapse: collapse;
   text-align: left;
   font-size: 0.82rem;
@@ -312,7 +320,7 @@
       &.th-stage { width: 140px; }
       &.th-owner { width: 150px; }
       &.th-status { width: 150px; }
-      &.th-actions { width: 180px; text-align: right; }
+      &.th-actions { width: 210px; text-align: right; }
     }
   }
 
@@ -577,10 +585,16 @@
   max-width: 520px;
   margin: 40px auto;
 
-  .empty-icon {
-    font-size: 2.5rem;
-    margin-bottom: 10px;
-    color: #8C8D82;
+  .empty-icon-wrap {
+    width: 48px;
+    height: 48px;
+    border-radius: $radius-md;
+    background: $color-surface-hover;
+    color: $color-text-secondary;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 12px;
   }
 
   .empty-title {

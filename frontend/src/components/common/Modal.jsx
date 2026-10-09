@@ -1,7 +1,16 @@
 import React, { useEffect } from 'react';
+import { X } from 'lucide-react';
 import './Modal.scss';
 
-export const Modal = ({ isOpen, onClose, title, size = 'md', className = '', children }) => {
+export const Modal = ({
+  isOpen,
+  onClose,
+  title,
+  size = 'md',
+  className = '',
+  footer = null,
+  children
+}) => {
   useEffect(() => {
     const handleKeyDown = (e) => {
       if (e.key === 'Escape') onClose();
@@ -24,10 +33,11 @@ export const Modal = ({ isOpen, onClose, title, size = 'md', className = '', chi
         <div className="modal-header">
           <h3 className="modal-title">{title}</h3>
           <button className="modal-close" onClick={onClose} aria-label="Close modal">
-            &times;
+            <X size={18} />
           </button>
         </div>
         <div className="modal-body">{children}</div>
+        {footer && <div className="modal-footer">{footer}</div>}
       </div>
     </div>
   );

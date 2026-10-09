@@ -19,6 +19,7 @@ import { StatusBadge } from './StatusBadge';
 import { EditAssignmentModal } from './EditAssignmentModal';
 import { formatDate, formatDateTime, formatDurationMs } from '../../../utils/dateUtils';
 import { Button } from '../../../components/common/Button';
+import { Check, Layers } from 'lucide-react';
 import './RecordDrawer.scss';
 
 const STAGES = [
@@ -680,7 +681,7 @@ export const RecordDrawer = ({
                   key={step.id}
                   className={`step-node ${isCurrent ? 'active' : ''} ${isPast ? 'completed' : ''}`}
                 >
-                  <div className="step-circle">{isPast ? '✓' : isCurrent ? '●' : step.id}</div>
+                  <div className="step-circle">{isPast ? <Check size={11} strokeWidth={2.5} /> : step.id}</div>
                   <span className="step-text">{step.label}</span>
                   {idx < STAGES.length - 1 && <span className="step-line" />}
                 </div>
@@ -841,7 +842,7 @@ export const RecordDrawer = ({
                   </div>
                   {isAssignedMB ? (
                     <Button variant="primary" onClick={handleLaunchInitial} disabled={isProcessing}>
-                      {isProcessing ? 'Launching...' : '🚀 Launch Creative & Start 72h Clock'}
+                      {isProcessing ? 'Launching...' : 'Launch Creative & Start 72h Clock'}
                     </Button>
                   ) : (
                     <div style={{ fontSize: '0.8rem', color: '#8C8D82' }}>
@@ -878,7 +879,7 @@ export const RecordDrawer = ({
                   ) : (
                     <div>
                       <div className="success-alert-box" style={{ marginBottom: '16px' }}>
-                        🔓 <strong>Observation Period Completed!</strong> Performance report is ready for submission.
+                        <strong>Observation Period Completed:</strong> Performance report is ready for submission.
                       </div>
 
                       {/* 1. SELECT CREATIVE THAT WORKED */}
@@ -921,7 +922,7 @@ export const RecordDrawer = ({
                                   {c.url ? (
                                     <img src={c.url} alt={c.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                                   ) : (
-                                    <span>🎨</span>
+                                    <Layers size={18} color="#94A3B8" />
                                   )}
                                 </div>
 
@@ -930,7 +931,7 @@ export const RecordDrawer = ({
                                     {c.name}
                                   </div>
                                   <div style={{ fontSize: '0.7rem', color: isSelected ? '#854D0E' : '#64748B' }}>
-                                    {isSelected ? '✓ Selected' : 'Click to select'}
+                                    {isSelected ? 'Selected' : 'Click to select'}
                                   </div>
                                 </div>
                               </div>
@@ -1287,7 +1288,7 @@ export const RecordDrawer = ({
                         onClick={handleSavePerformanceAnalysis}
                         disabled={isProcessing}
                       >
-                        {isProcessing ? 'Saving...' : '💾 Save Performance Analysis'}
+                        {isProcessing ? 'Saving...' : 'Save Performance Analysis'}
                       </Button>
                     </div>
                   )}
@@ -1562,13 +1563,13 @@ export const RecordDrawer = ({
                       {isAssignedCS ? (
                         <div className="decision-btn-group">
                           <Button variant="primary" onClick={() => handleReviewBriefDecision('APPROVED')} disabled={isProcessing}>
-                            ✓ Approve Brief & Start Production
+                            Approve Brief & Start Production
                           </Button>
                           <Button variant="ghost" onClick={() => handleReviewBriefDecision('REVISE')} disabled={isProcessing}>
-                            ↺ Request Revision
+                            Request Revision
                           </Button>
                           <Button variant="danger" onClick={() => handleReviewBriefDecision('REJECTED')} disabled={isProcessing}>
-                            ✕ Reject Brief
+                            Reject Brief
                           </Button>
                         </div>
                       ) : (
@@ -1742,13 +1743,13 @@ export const RecordDrawer = ({
                       {isAssignedCS ? (
                         <div className="decision-btn-group">
                           <Button variant="primary" onClick={() => handleReviewCreativeDecision('APPROVED')} disabled={isProcessing}>
-                            ✓ Approve for Final Review
+                            Approve for Final Review
                           </Button>
                           <Button variant="ghost" onClick={() => handleReviewCreativeDecision('REVISE')} disabled={isProcessing}>
-                            ↺ Request Revision
+                            Request Revision
                           </Button>
                           <Button variant="danger" onClick={() => handleReviewCreativeDecision('REJECTED')} disabled={isProcessing}>
-                            ✕ Reject
+                            Reject
                           </Button>
                         </div>
                       ) : (
@@ -1786,7 +1787,7 @@ export const RecordDrawer = ({
                   {record.status === 'CLIENT_REVIEW' ? (
                     <div>
                       <div className="info-alert-box">
-                        ⭐ <strong>Ready for Final Sign-Off:</strong> Creative has passed internal strategist review.
+                        <strong>Ready for Final Sign-Off:</strong> Creative has passed internal strategist review.
                       </div>
                       <div className="field-group">
                         <label>Final Approval Comments / Instructions</label>
@@ -1802,13 +1803,13 @@ export const RecordDrawer = ({
                       {isAdmin ? (
                         <div className="decision-btn-group">
                           <Button variant="primary" onClick={() => handleFinalApprovalDecision('APPROVED')} disabled={isProcessing}>
-                            ✓ Approve Creative for Launch
+                            Approve Creative for Launch
                           </Button>
                           <Button variant="ghost" onClick={() => handleFinalApprovalDecision('REVISE')} disabled={isProcessing}>
-                            ↺ Request Revision
+                            Request Revision
                           </Button>
                           <Button variant="danger" onClick={() => handleFinalApprovalDecision('REJECTED')} disabled={isProcessing}>
-                            ✕ Reject
+                            Reject
                           </Button>
                         </div>
                       ) : (
@@ -1846,7 +1847,7 @@ export const RecordDrawer = ({
                   </div>
 
                   <div className="success-alert-box" style={{ background: '#FFFFFF', borderColor: '#FDE047' }}>
-                    🎉 <strong>Creative Approved and Ready to Launch!</strong>
+                    <strong>Creative Approved and Ready to Launch</strong>
                     <p style={{ margin: '6px 0 0', fontSize: '0.85rem' }}>
                       When you launch this approved creative in Ads Manager, click <strong>[Record Launch & Start Next Cycle]</strong>.
                       This will permanently archive {record.currentTestingCycle} as completed, spawn Cycle {(record.cycleNumber || 1) + 1},
@@ -1863,7 +1864,7 @@ export const RecordDrawer = ({
 
                   {isAssignedMB ? (
                     <Button variant="primary" onClick={handleRecordNextCycleLaunch} disabled={isProcessing}>
-                      {isProcessing ? 'Launching Next Cycle...' : `🚀 Record Launch & Start Cycle ${(record.cycleNumber || 1) + 1}`}
+                      {isProcessing ? 'Launching Next Cycle...' : `Record Launch & Start Cycle ${(record.cycleNumber || 1) + 1}`}
                     </Button>
                   ) : (
                     <div style={{ fontSize: '0.8rem', color: '#8C8D82' }}>
@@ -1877,7 +1878,7 @@ export const RecordDrawer = ({
               {record.status === 'COMPLETED' && (
                 <div className="operational-action-card" style={{ background: '#F0FDF4', borderColor: '#BBF7D0' }}>
                   <h3 className="card-title" style={{ color: '#166534', marginBottom: '8px' }}>
-                    ✓ {record.currentTestingCycle} Successfully Completed
+                    {record.currentTestingCycle} Successfully Completed
                   </h3>
                   <p style={{ fontSize: '0.85rem', color: '#166534', margin: 0 }}>
                     This cycle completed permanently on {formatDateTime(record.completedAt)}.

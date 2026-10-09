@@ -7,6 +7,7 @@ import {
   uploadCreativeFile,
   deleteCreativeFile
 } from '../../../api/creativeStrategy.api';
+import { Check, AlertCircle, Upload, Film, Loader2 } from 'lucide-react';
 import './UnifiedAddCreativeWizard.scss';
 
 const DEFAULT_PRESET_LOCATIONS = [
@@ -608,19 +609,19 @@ export const UnifiedAddCreativeWizard = ({
         {/* STEP INDICATOR */}
         <div className="wizard-step-indicator" role="navigation" aria-label="Creation steps">
           <div className={`step-item ${currentStep === 1 ? 'current' : currentStep > 1 ? 'completed' : ''}`}>
-            <div className="step-circle">{currentStep > 1 ? '✓' : '1'}</div>
+            <div className="step-circle">{currentStep > 1 ? <Check size={12} strokeWidth={2.5} /> : '1'}</div>
             <div className="step-label">Campaign Details</div>
           </div>
           <div className="step-connector" />
 
           <div className={`step-item ${currentStep === 2 ? 'current' : currentStep > 2 ? 'completed' : ''}`}>
-            <div className="step-circle">{currentStep > 2 ? '✓' : '2'}</div>
+            <div className="step-circle">{currentStep > 2 ? <Check size={12} strokeWidth={2.5} /> : '2'}</div>
             <div className="step-label">Ad Set Details</div>
           </div>
           <div className="step-connector" />
 
           <div className={`step-item ${currentStep === 3 ? 'current' : currentStep > 3 ? 'completed' : ''}`}>
-            <div className="step-circle">{currentStep > 3 ? '✓' : '3'}</div>
+            <div className="step-circle">{currentStep > 3 ? <Check size={12} strokeWidth={2.5} /> : '3'}</div>
             <div className="step-label">Ad Details</div>
           </div>
           <div className="step-connector" />
@@ -633,7 +634,7 @@ export const UnifiedAddCreativeWizard = ({
 
         {globalError && (
           <div className="wizard-error-banner" role="alert">
-            ⚠️ {globalError}
+            <AlertCircle size={14} style={{ marginRight: '6px' }} /> {globalError}
           </div>
         )}
 
@@ -1326,7 +1327,7 @@ export const UnifiedAddCreativeWizard = ({
                   accept="image/*,video/*"
                 />
                 <div className="dropzone-content">
-                  <span className="dropzone-icon">📁</span>
+                  <span className="dropzone-icon"><Upload size={24} /></span>
                   <p className="dropzone-title">
                     Drag & Drop creative files here, or <span className="browse-link">Browse files</span>
                   </p>
@@ -1343,12 +1344,14 @@ export const UnifiedAddCreativeWizard = ({
                     <div key={file.tempId || file.fileId || idx} className="upload-thumbnail-card">
                       {file.url ? (
                         file.mimeType?.startsWith('video') ? (
-                          <div className="video-thumb-placeholder">🎬 Video</div>
+                          <div className="video-thumb-placeholder">
+                            <Film size={14} style={{ marginRight: '4px' }} /> Video
+                          </div>
                         ) : (
                           <img src={file.url} alt={file.name} className="thumb-img" />
                         )
                       ) : (
-                        <div className="thumb-spinner">⏳</div>
+                        <div className="thumb-spinner"><Loader2 size={16} className="spinning" /></div>
                       )}
 
                       <div className="thumb-details">
@@ -1665,7 +1668,7 @@ export const UnifiedAddCreativeWizard = ({
                         {f.url && !f.mimeType?.startsWith('video') ? (
                           <img src={f.url} alt={f.name} />
                         ) : (
-                          <div className="thumb-placeholder-mini">🎬</div>
+                          <div className="thumb-placeholder-mini"><Film size={14} /></div>
                         )}
                       </div>
                     ))}

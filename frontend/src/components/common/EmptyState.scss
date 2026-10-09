@@ -5,35 +5,40 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 3.5rem 2rem;
+  text-align: center;
+  padding: 3rem 1.5rem;
   background-color: $color-card-bg;
   border: 1px dashed $color-border;
-  border-radius: $radius-md;
-  text-align: center;
+  border-radius: $radius-lg;
 
-  .empty-state-icon {
-    width: 3rem;
-    height: 3rem;
-    border-radius: 50%;
-    background-color: #ECFDF5;
-    color: #10B981;
-    display: flex;
+  .empty-state-icon-wrap {
+    display: inline-flex;
     align-items: center;
     justify-content: center;
-    font-size: 1.25rem;
-    font-weight: 700;
-    margin-bottom: 1rem;
+    width: 48px;
+    height: 48px;
+    border-radius: $radius-full;
+    background-color: $color-surface-hover;
+    color: $color-text-muted;
+    margin-bottom: 0.85rem;
   }
 
   .empty-state-title {
-    font-size: 1.15rem;
-    font-weight: 700;
-    margin-bottom: 0.35rem;
+    font-size: 0.9375rem; // 15px
+    font-weight: 600;
+    color: $color-text-primary;
+    margin: 0 0 0.25rem;
   }
 
   .empty-state-description {
-    font-size: 0.9rem;
-    color: $color-text-secondary;
+    font-size: 0.8125rem; // 13px
+    color: $color-text-muted;
     max-width: 360px;
+    margin: 0;
+    line-height: 1.45;
+  }
+
+  .empty-state-action {
+    margin-top: 1rem;
   }
 }

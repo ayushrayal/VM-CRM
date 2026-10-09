@@ -3,10 +3,11 @@ import './Button.scss';
 
 export const Button = ({
   children,
-  variant = 'primary', // 'primary', 'secondary', 'danger', 'ghost'
+  variant = 'primary', // 'primary', 'secondary', 'accent', 'danger', 'ghost'
   size = 'md', // 'sm', 'md', 'lg'
   loading = false,
   disabled = false,
+  icon = null,
   onClick,
   type = 'button',
   fullWidth = false,
@@ -24,10 +25,13 @@ export const Button = ({
       {loading ? (
         <span className="btn-spinner-container">
           <span className="btn-spinner" />
-          <span>Processing...</span>
+          <span>Loading...</span>
         </span>
       ) : (
-        children
+        <>
+          {icon && <span className="btn-icon">{icon}</span>}
+          {children}
+        </>
       )}
     </button>
   );

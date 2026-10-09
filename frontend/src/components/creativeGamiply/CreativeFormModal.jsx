@@ -3,6 +3,7 @@ import { Modal } from '../common/Modal';
 import { Button } from '../common/Button';
 import { Input } from '../common/Input';
 import { ClientSelect } from '../common/ClientSelect';
+import { AlertCircle } from 'lucide-react';
 import { CREATIVE_STATUSES, CREATIVE_STATUS_CONFIG } from '../../constants/creative.constants';
 import './CreativeFormModal.scss';
 
@@ -142,7 +143,7 @@ export const CreativeFormModal = ({
       <form onSubmit={handleSubmit} className="creative-form">
         {errorMessage && (
           <div className="form-error-banner" role="alert">
-            <span className="error-icon">⚠️</span>
+            <AlertCircle size={14} className="error-icon" />
             <span>{errorMessage}</span>
           </div>
         )}

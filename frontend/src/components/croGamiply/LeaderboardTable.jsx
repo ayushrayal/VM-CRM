@@ -1,4 +1,5 @@
 import React from 'react';
+import { Trophy } from 'lucide-react';
 import { PERIOD_FILTERS, CRO_BADGES } from '../../constants/cro.constants';
 import './LeaderboardTable.scss';
 
@@ -15,10 +16,7 @@ export const LeaderboardTable = ({
     return '';
   };
 
-  const getRankIcon = (rank) => {
-    if (rank === 1) return '🥇';
-    if (rank === 2) return '🥈';
-    if (rank === 3) return '🥉';
+  const getRankLabel = (rank) => {
     return `#${rank}`;
   };
 
@@ -56,8 +54,7 @@ export const LeaderboardTable = ({
                 leaderboard[1].creatorId === currentUserId ? 'is-me' : ''
               }`}
             >
-              <div className="podium-medal">🥈</div>
-              <div className="podium-rank">#2</div>
+              <div className="podium-rank-tag">#2 Contender</div>
               <div className="podium-name" title={leaderboard[1].creatorName}>
                 {leaderboard[1].creatorName}
               </div>
@@ -77,9 +74,10 @@ export const LeaderboardTable = ({
                 leaderboard[0].creatorId === currentUserId ? 'is-me' : ''
               }`}
             >
-              <div className="podium-crown">👑</div>
-              <div className="podium-medal">🥇</div>
-              <div className="podium-rank">#1 Champion</div>
+              <div className="podium-rank-tag">
+                <Trophy size={13} style={{ marginRight: '4px' }} />
+                #1 Champion
+              </div>
               <div className="podium-name" title={leaderboard[0].creatorName}>
                 {leaderboard[0].creatorName}
               </div>
@@ -99,8 +97,7 @@ export const LeaderboardTable = ({
                 leaderboard[2].creatorId === currentUserId ? 'is-me' : ''
               }`}
             >
-              <div className="podium-medal">🥉</div>
-              <div className="podium-rank">#3</div>
+              <div className="podium-rank-tag">#3 Finalist</div>
               <div className="podium-name" title={leaderboard[2].creatorName}>
                 {leaderboard[2].creatorName}
               </div>
@@ -138,7 +135,7 @@ export const LeaderboardTable = ({
                     <tr key={item.creatorId} className={`${isMe ? 'highlight-row' : ''}`}>
                       <td className="rank-cell">
                         <span className={`rank-badge ${getRankBadgeClass(item.rank)}`}>
-                          {getRankIcon(item.rank)}
+                          {getRankLabel(item.rank)}
                         </span>
                       </td>
 
@@ -183,14 +180,14 @@ export const LeaderboardTable = ({
                         <div className="badges-row">
                           {item.badges?.length > 0 ? (
                             item.badges.map((bId) => {
-                              const bDef = CRO_BADGES[bId] || { icon: '🏅', name: bId };
+                              const bDef = CRO_BADGES[bId] || { name: bId };
                               return (
                                 <span
                                   key={bId}
                                   className="badge-bubble"
                                   title={`${bDef.name} (${bDef.desc || ''})`}
                                 >
-                                  {bDef.icon}
+                                  {bDef.name}
                                 </span>
                               );
                             })
@@ -207,9 +204,11 @@ export const LeaderboardTable = ({
           </div>
         ) : (
           <div className="leaderboard-empty-state">
-            <span className="empty-icon">🏆</span>
+            <div className="empty-icon-wrap">
+              <Trophy size={28} />
+            </div>
             <h4>No experiments recorded in this period</h4>
-            <p>Complete experiments with positive results to appear on the leaderboard!</p>
+            <p>Complete experiments with positive results to appear on the leaderboard.</p>
           </div>
         )}
       </div>

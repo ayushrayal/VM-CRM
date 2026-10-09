@@ -14,6 +14,7 @@ import { Input } from '../../components/common/Input';
 import { Modal } from '../../components/common/Modal';
 import { Badge } from '../../components/common/Badge';
 import { LoadingSpinner } from '../../components/common/LoadingSpinner';
+import { ChevronLeft, Check, AlertCircle, Plus } from 'lucide-react';
 import {
   getMonthName,
   formatCurrency,
@@ -275,8 +276,13 @@ export const ProjectDetailPage = () => {
   if (!projection) {
     return (
       <div className="project-detail-container">
-        <Button variant="ghost" size="sm" onClick={() => navigate('/projections')}>
-          ← Back to Projections
+        <Button
+          variant="ghost"
+          size="sm"
+          icon={<ChevronLeft size={14} />}
+          onClick={() => navigate('/projections')}
+        >
+          Back to Projections
         </Button>
         <p style={{ marginTop: '24px' }}>Projection not found or removed.</p>
       </div>
@@ -293,7 +299,7 @@ export const ProjectDetailPage = () => {
       {/* Toast Banner */}
       {toast && (
         <div className={`detail-toast-banner ${toast.type}`}>
-          <span>{toast.type === 'success' ? '✓' : '⚠'}</span>
+          {toast.type === 'success' ? <Check size={14} /> : <AlertCircle size={14} />}
           <span>{toast.message}</span>
         </div>
       )}
@@ -304,10 +310,11 @@ export const ProjectDetailPage = () => {
           <Button
             variant="ghost"
             size="sm"
+            icon={<ChevronLeft size={14} />}
             onClick={() => navigate('/projections')}
             className="back-btn"
           >
-            ← Back to All Projections
+            Back to Projections
           </Button>
           <span className="breadcrumb-divider">/</span>
           <span className="breadcrumb-current">{clientName}</span>
@@ -585,9 +592,9 @@ export const ProjectDetailPage = () => {
               <thead>
                 <tr>
                   <th>Date</th>
-                  <th>Actual Ad Spend</th>
-                  <th>Actual Revenue</th>
-                  <th>Daily ROAS</th>
+                  <th className="th-num">Actual Ad Spend</th>
+                  <th className="th-num">Actual Revenue</th>
+                  <th className="th-num">Daily ROAS</th>
                   <th>Notes</th>
                   <th className="th-action">Actions</th>
                 </tr>
@@ -819,7 +826,7 @@ export const ProjectDetailPage = () => {
               <thead>
                 <tr>
                   <th>Effective Date</th>
-                  <th>Budget</th>
+                  <th className="th-num">Budget</th>
                   <th>Updated By</th>
                   <th>Updated At</th>
                 </tr>
@@ -830,7 +837,7 @@ export const ProjectDetailPage = () => {
                     <td>
                       <strong>{entry.effectiveDate}</strong>
                     </td>
-                    <td>{formatCurrency(entry.budget)}/day</td>
+                    <td className="budget-num-cell">{formatCurrency(entry.budget)}/day</td>
                     <td>{entry.updatedBy?.name || 'User'}</td>
                     <td>{new Date(entry.updatedAt).toLocaleString()}</td>
                   </tr>

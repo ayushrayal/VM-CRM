@@ -77,10 +77,10 @@ export const ExperimentCard = ({
       <div className="card-metrics-row">
         <div className="card-screenshots-info">
           <span className={`media-chip ${beforeCount > 0 ? 'has-media' : ''}`}>
-            📸 Before: {beforeCount}
+            Before: {beforeCount}
           </span>
           <span className={`media-chip ${afterCount > 0 ? 'has-media' : ''}`}>
-            ✨ After: {afterCount}
+            After: {afterCount}
           </span>
         </div>
 

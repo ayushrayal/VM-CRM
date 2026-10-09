@@ -14,6 +14,8 @@ import { Modal } from '../../components/common/Modal';
 import { Badge } from '../../components/common/Badge';
 import { LoadingSpinner } from '../../components/common/LoadingSpinner';
 import { EmptyState } from '../../components/common/EmptyState';
+import { PageHeader } from '../../components/common/PageHeader';
+import { Plus, Check, AlertCircle } from 'lucide-react';
 import {
   MONTHS,
   getMonthName,
@@ -295,29 +297,26 @@ export const ProjectionsPage = () => {
       {/* Toast Notification */}
       {toast && (
         <div className={`projection-toast-banner ${toast.type}`}>
-          <span>{toast.type === 'success' ? '✓' : '⚠'}</span>
+          {toast.type === 'success' ? <Check size={14} /> : <AlertCircle size={14} />}
           <span>{toast.message}</span>
         </div>
       )}
 
       {/* Header */}
-      <div className="projections-header">
-        <div className="header-left">
-          <div className="title-row">
-            <span className="section-badge">PERFORMANCE</span>
-            <h1 className="page-title">Project Projections</h1>
-          </div>
-          <p className="page-subtitle">
-            Track monthly targets, daily actuals, and automated forecasts project-by-project
-          </p>
-        </div>
-
-        <div className="header-actions">
-          <Button variant="primary" size="md" onClick={handleOpenCreateModal}>
-            + Create Projection
+      <PageHeader
+        title="Project Projections"
+        description="Track monthly targets, daily actuals, and automated forecasts project-by-project."
+        actions={
+          <Button
+            variant="primary"
+            size="md"
+            icon={<Plus size={16} />}
+            onClick={handleOpenCreateModal}
+          >
+            Create Projection
           </Button>
-        </div>
-      </div>
+        }
+      />
 
       {/* Period & Filter Bar */}
       <div className="controls-card">
@@ -468,8 +467,13 @@ export const ProjectionsPage = () => {
             )} ${selectedYear}.`}
           />
           <div style={{ marginTop: '16px', display: 'flex', justifyContent: 'center' }}>
-            <Button variant="primary" size="md" onClick={handleOpenCreateModal}>
-              + Create Projection
+            <Button
+              variant="primary"
+              size="md"
+              icon={<Plus size={15} />}
+              onClick={handleOpenCreateModal}
+            >
+              Create Projection
             </Button>
           </div>
         </div>
@@ -480,14 +484,14 @@ export const ProjectionsPage = () => {
             <thead>
               <tr>
                 <th>Client</th>
-                <th>Target Spend</th>
-                <th>Actual Spend</th>
-                <th>Forecast Spend</th>
-                <th>Target Rev</th>
-                <th>Actual Rev</th>
-                <th>Forecast Rev</th>
-                <th>Target ROAS</th>
-                <th>Forecast ROAS</th>
+                <th className="th-num">Target Spend</th>
+                <th className="th-num">Actual Spend</th>
+                <th className="th-num">Forecast Spend</th>
+                <th className="th-num">Target Rev</th>
+                <th className="th-num">Actual Rev</th>
+                <th className="th-num">Forecast Rev</th>
+                <th className="th-num">Target ROAS</th>
+                <th className="th-num">Forecast ROAS</th>
                 <th>Status</th>
                 <th className="th-action">Actions</th>
               </tr>

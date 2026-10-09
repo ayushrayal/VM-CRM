@@ -2,28 +2,28 @@
 @use '../../styles/variables' as *;
 
 .project-detail-container {
-  padding: 24px;
-  max-width: 1440px;
-  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
 
   .detail-toast-banner {
-    padding: 12px 16px;
+    padding: 0.75rem 1rem;
     border-radius: $radius-md;
-    margin-bottom: 20px;
+    font-size: 0.8125rem;
     font-weight: 500;
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 0.5rem;
 
     &.success {
       background: $color-success-bg;
-      color: $color-success-text;
+      color: $color-success;
       border: 1px solid $color-success-border;
     }
 
     &.error {
       background: $color-danger-bg;
-      color: $color-danger-text;
+      color: $color-danger;
       border: 1px solid $color-danger-border;
     }
   }
@@ -364,6 +364,8 @@
 
     .daily-table-container {
       overflow-x: auto;
+      max-width: 100%;
+      -webkit-overflow-scrolling: touch;
 
       .daily-table {
         width: 100%;
@@ -383,6 +385,10 @@
             font-size: 0.78rem;
             text-transform: uppercase;
             letter-spacing: 0.04em;
+
+            &.th-num {
+              text-align: right;
+            }
 
             &.th-action {
               text-align: right;
@@ -411,16 +417,19 @@
               &.spend-cell {
                 font-variant-numeric: tabular-nums;
                 font-weight: 600;
+                text-align: right;
               }
 
               &.revenue-cell {
                 font-variant-numeric: tabular-nums;
                 font-weight: 600;
                 color: #0E7490;
+                text-align: right;
               }
 
               &.roas-cell {
                 font-weight: 700;
+                text-align: right;
               }
 
               &.notes-cell {
@@ -473,6 +482,80 @@
             &.revenue-cell,
             &.roas-cell {
               font-variant-numeric: tabular-nums;
+              text-align: right;
+            }
+          }
+        }
+      }
+    }
+  }
+
+  // Budget History Modal
+  .budget-history-container {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+
+    .history-description {
+      font-size: 0.82rem;
+      color: $color-text-secondary;
+      margin: 0;
+      line-height: 1.45;
+    }
+
+    .history-table-wrapper {
+      max-height: 320px;
+      overflow-y: auto;
+      overflow-x: auto;
+      border: 1px solid $color-border;
+      border-radius: $radius-sm;
+
+      .history-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 0.82rem;
+        white-space: nowrap;
+
+        thead {
+          background: #F8F8F5;
+          position: sticky;
+          top: 0;
+          z-index: 2;
+          border-bottom: 1px solid $color-border;
+
+          th {
+            padding: 9px 12px;
+            text-align: left;
+            font-weight: 600;
+            color: $color-text-secondary;
+            font-size: 0.72rem;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+
+            &.th-num {
+              text-align: right;
+            }
+          }
+        }
+
+        tbody {
+          tr {
+            border-bottom: 1px solid $color-border-subtle;
+
+            &:last-child {
+              border-bottom: none;
+            }
+
+            td {
+              padding: 9px 12px;
+              color: $color-text-primary;
+              vertical-align: middle;
+
+              &.budget-num-cell {
+                font-variant-numeric: tabular-nums;
+                font-weight: 600;
+                text-align: right;
+              }
             }
           }
         }

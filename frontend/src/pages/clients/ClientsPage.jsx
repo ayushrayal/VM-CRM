@@ -8,6 +8,18 @@ import {
   getClientDeletePreview
 } from '../../api/client.api';
 import { getStreamUrl } from '../../api/axios';
+import {
+  Building2,
+  TrendingUp,
+  Award,
+  Search,
+  Plus,
+  Pencil,
+  Trash2,
+  X,
+  AlertCircle
+} from 'lucide-react';
+import { PageHeader } from '../../components/common/PageHeader';
 import { Button } from '../../components/common/Button';
 import { Input } from '../../components/common/Input';
 import { Modal } from '../../components/common/Modal';
@@ -255,30 +267,29 @@ export const ClientsPage = () => {
       )}
 
       {/* Header Banner */}
-      <div className="clients-header">
-        <div className="header-left">
-          <div className="title-row">
-            <span className="section-badge">CENTRAL DIRECTORY</span>
-            <h1 className="page-title">Client Management</h1>
-          </div>
-          <p className="page-subtitle">
-            Shared central client registry across Creative Strategy, Creative Performance, and CRO Performance.
-          </p>
-        </div>
-
-        {isAdmin && (
-          <div className="header-actions">
-            <Button variant="primary" size="lg" onClick={handleOpenAdd}>
-              + Add Client
+      <PageHeader
+        title="Client Management"
+        description="Shared central client registry across Creative Strategy, Creative Performance, and CRO Performance."
+        actions={
+          isAdmin && (
+            <Button
+              variant="primary"
+              size="md"
+              icon={<Plus size={16} />}
+              onClick={handleOpenAdd}
+            >
+              Add Client
             </Button>
-          </div>
-        )}
-      </div>
+          )
+        }
+      />
 
       {/* Stats Cards */}
       <div className="clients-stats-grid">
         <div className="stat-card">
-          <div className="stat-icon">🏢</div>
+          <div className="stat-icon-wrap">
+            <Building2 size={18} strokeWidth={1.75} />
+          </div>
           <div className="stat-content">
             <span className="stat-label">Total Active Clients</span>
             <span className="stat-main-val">{clients.length}</span>
@@ -286,15 +297,19 @@ export const ClientsPage = () => {
         </div>
 
         <div className="stat-card">
-          <div className="stat-icon">📊</div>
+          <div className="stat-icon-wrap">
+            <TrendingUp size={18} strokeWidth={1.75} />
+          </div>
           <div className="stat-content">
             <span className="stat-label">Avg Baseline ROAS</span>
             <span className="stat-main-val">{avgBaseline}x</span>
           </div>
         </div>
 
-        <div className="stat-card highlight">
-          <div className="stat-icon">🚀</div>
+        <div className="stat-card">
+          <div className="stat-icon-wrap">
+            <Award size={18} strokeWidth={1.75} />
+          </div>
           <div className="stat-content">
             <span className="stat-label">Top Client ROAS</span>
             <span className="stat-main-val">{maxROAS}x</span>
@@ -305,6 +320,7 @@ export const ClientsPage = () => {
       {/* Search & Filter Toolbar */}
       <div className="clients-toolbar">
         <div className="search-box">
+          <Search size={16} className="search-prefix-icon" />
           <input
             type="text"
             placeholder="Search by client name, code, or description..."
@@ -312,8 +328,8 @@ export const ClientsPage = () => {
             onChange={(e) => setSearchQuery(e.target.value)}
           />
           {searchQuery && (
-            <button className="clear-search-btn" onClick={() => setSearchQuery('')}>
-              &times;
+            <button className="clear-search-btn" onClick={() => setSearchQuery('')} aria-label="Clear search">
+              <X size={14} />
             </button>
           )}
         </div>
@@ -348,7 +364,9 @@ export const ClientsPage = () => {
                   <tr key={client._id}>
                     <td className="client-name-cell">
                       <div className="name-wrapper">
-                        <span className="client-icon">🏢</span>
+                        <span className="client-icon">
+                          <Building2 size={15} strokeWidth={1.75} />
+                        </span>
                         <span className="client-title">{client.clientName || client.name}</span>
                       </div>
                     </td>
@@ -386,6 +404,7 @@ export const ClientsPage = () => {
                         <Button
                           variant="ghost"
                           size="sm"
+                          icon={<Pencil size={13} />}
                           onClick={() => handleOpenEdit(client)}
                         >
                           Edit
@@ -393,6 +412,7 @@ export const ClientsPage = () => {
                         <Button
                           variant="danger"
                           size="sm"
+                          icon={<Trash2 size={13} />}
                           onClick={() => handleOpenDelete(client)}
                         >
                           Delete
@@ -406,7 +426,7 @@ export const ClientsPage = () => {
           </div>
         ) : (
           <div className="clients-empty-state">
-            <span className="empty-icon">🏢</span>
+            <Building2 size={32} className="empty-icon" strokeWidth={1.5} />
             <h3>No clients found</h3>
             <p>
               {searchQuery
@@ -414,8 +434,8 @@ export const ClientsPage = () => {
                 : 'No clients registered yet.'}
             </p>
             {isAdmin && !searchQuery && (
-              <Button variant="primary" onClick={handleOpenAdd}>
-                + Add First Client
+              <Button variant="primary" icon={<Plus size={15} />} onClick={handleOpenAdd}>
+                Add First Client
               </Button>
             )}
           </div>
@@ -432,7 +452,7 @@ export const ClientsPage = () => {
         <form onSubmit={handleSubmit} className="client-modal-form">
           {modalError && (
             <div className="form-error-banner" role="alert">
-              <span>⚠️</span> {modalError}
+              <AlertCircle size={14} style={{ marginRight: '6px' }} /> {modalError}
             </div>
           )}
 
