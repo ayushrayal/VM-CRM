@@ -53,6 +53,25 @@ export const handleAddOrUpdateDailyTracking = async (req, res, next) => {
   }
 };
 
+export const handleBulkDailyTracking = async (req, res, next) => {
+  try {
+    const result = await projectionService.addBulkDailyTracking(
+      req.params.id,
+      req.body,
+      req.user._id
+    );
+    res.status(200).json(
+      new ApiResponse(
+        200,
+        result,
+        `Bulk daily tracking saved successfully (${result.summary.createdCount} created, ${result.summary.updatedCount} updated)`
+      )
+    );
+  } catch (error) {
+    next(error);
+  }
+};
+
 export const handleUpdateDailyTrackingEntry = async (req, res, next) => {
   try {
     const projection = await projectionService.updateDailyTrackingEntry(

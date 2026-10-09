@@ -49,6 +49,37 @@ export const addDailyTrackingSchema = z.object({
   })
 });
 
+export const addBulkDailyTrackingSchema = z.object({
+  params: z.object({
+    id: z.string().regex(/^[0-9a-fA-F]{24}$/, 'Invalid projection ID')
+  }),
+  body: z.object({
+    entries: z
+      .array(
+        z.object({
+          date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Date must be in YYYY-MM-DD format'),
+          actualSpend: positiveNumber('Actual spend'),
+          actualRevenue: positiveNumber('Actual revenue'),
+          notes: z.string().trim().optional()
+        })
+      )
+      .min(1, 'At least one daily entry is required in batch'),
+    overwriteExisting: z.boolean().optional().default(false)
+  }).superRefine((data, ctx) => {
+    const seen = new Set();
+    data.entries.forEach((entry, index) => {
+      if (seen.has(entry.date)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: `Duplicate date '${entry.date}' found in submission batch`,
+          path: ['entries', index, 'date']
+        });
+      }
+      seen.add(entry.date);
+    });
+  })
+});
+
 export const updateDailyTrackingSchema = z.object({
   params: z.object({
     id: z.string().regex(/^[0-9a-fA-F]{24}$/, 'Invalid projection ID'),

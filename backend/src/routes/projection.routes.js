@@ -5,6 +5,7 @@ import {
   handleCreateProjection,
   handleUpdateProjection,
   handleAddOrUpdateDailyTracking,
+  handleBulkDailyTracking,
   handleUpdateDailyTrackingEntry,
   handleDeleteDailyTrackingEntry,
   handleDeleteProjection
@@ -16,6 +17,7 @@ import {
   createProjectionSchema,
   updateProjectionSchema,
   addDailyTrackingSchema,
+  addBulkDailyTrackingSchema,
   updateDailyTrackingSchema,
   projectionIdParamSchema,
   dailyIdParamSchema,
@@ -36,6 +38,7 @@ router.delete('/:id', requireRole(ROLES.ADMIN), validate(projectionIdParamSchema
 
 // Daily tracking routes
 router.post('/:id/daily', validate(addDailyTrackingSchema), handleAddOrUpdateDailyTracking);
+router.post('/:id/daily/bulk', validate(addBulkDailyTrackingSchema), handleBulkDailyTracking);
 router.patch('/:id/daily/:dailyId', validate(updateDailyTrackingSchema), handleUpdateDailyTrackingEntry);
 router.delete('/:id/daily/:dailyId', validate(dailyIdParamSchema), handleDeleteDailyTrackingEntry);
 

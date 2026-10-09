@@ -1,0 +1,386 @@
+@use '../../../styles/variables' as *;
+
+.bulk-daily-modal {
+  .modal-content {
+    max-width: 940px;
+    width: 95vw;
+  }
+}
+
+.bulk-daily-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+
+  /* Context Header */
+  .bulk-context-header {
+    background: #FAFAF7;
+    border: 1px solid #E5E5DC;
+    border-radius: $radius-md;
+    padding: 12px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+
+    .context-meta-group {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+
+      .context-period-badge {
+        font-family: $font-heading;
+        font-weight: 700;
+        font-size: 0.92rem;
+        color: #1A1A1A;
+      }
+
+      .context-client-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        background: #FFFFFF;
+        border: 1px solid #E5E5DC;
+        padding: 2px 8px;
+        border-radius: $radius-sm;
+        font-size: 0.78rem;
+
+        .client-name {
+          font-weight: 600;
+          color: #1A1A1A;
+        }
+
+        .client-code {
+          background: #F4F4EE;
+          padding: 1px 5px;
+          border-radius: 3px;
+          font-weight: 700;
+          font-size: 0.7rem;
+          color: #5A5B52;
+          text-transform: uppercase;
+        }
+      }
+    }
+
+    .context-helper-text {
+      font-size: 0.78rem;
+      color: #5A5B52;
+      margin: 0;
+      line-height: 1.4;
+    }
+  }
+
+  /* Alert Banners */
+  .bulk-alert-banner {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 10px 14px;
+    border-radius: $radius-sm;
+    font-size: 0.82rem;
+    line-height: 1.4;
+
+    &.error {
+      background: #FEF2F2;
+      border: 1px solid #FECACA;
+      color: #991B1B;
+    }
+
+    &.warning {
+      background: #FFFDF0;
+      border: 1px solid #FDE68A;
+      color: #854D0E;
+
+      .warning-content {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        width: 100%;
+
+        .warning-title-row {
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          font-weight: 700;
+          color: #854D0E;
+        }
+
+        .warning-desc {
+          margin: 0;
+          font-size: 0.78rem;
+
+          .dates-pill-list {
+            font-weight: 600;
+            background: #FEF9C3;
+            padding: 1px 6px;
+            border-radius: 3px;
+            border: 1px solid #FDE047;
+          }
+        }
+
+        .overwrite-checkbox-label {
+          margin-top: 6px;
+          display: inline-flex;
+          align-items: center;
+          gap: 8px;
+          font-size: 0.8rem;
+          font-weight: 600;
+          color: #713F12;
+          cursor: pointer;
+
+          input[type='checkbox'] {
+            width: 16px;
+            height: 16px;
+            accent-color: #000000;
+            cursor: pointer;
+          }
+        }
+      }
+    }
+  }
+
+  /* Table Container */
+  .bulk-table-container {
+    border: 1px solid #E5E5DC;
+    border-radius: $radius-md;
+    overflow-x: auto;
+    max-height: 400px;
+    overflow-y: auto;
+    background: #FFFFFF;
+    -webkit-overflow-scrolling: touch;
+
+    .bulk-table {
+      width: 100%;
+      min-width: 780px;
+      border-collapse: collapse;
+      font-size: 0.82rem;
+
+      thead {
+        position: sticky;
+        top: 0;
+        z-index: 2;
+        background: #F8F8F5;
+        border-bottom: 1px solid #E5E5DC;
+
+        th {
+          padding: 9px 12px;
+          text-align: left;
+          font-size: 0.72rem;
+          font-weight: 700;
+          text-transform: uppercase;
+          letter-spacing: 0.04em;
+          color: #5A5B52;
+          white-space: nowrap;
+
+          &.th-num {
+            text-align: right;
+          }
+
+          &.th-action {
+            text-align: center;
+          }
+        }
+      }
+
+      tbody {
+        tr.bulk-row {
+          border-bottom: 1px solid #F0F0EB;
+          transition: background-color $transition-fast;
+
+          &:last-child {
+            border-bottom: none;
+          }
+
+          &:hover {
+            background-color: #FAFAF7;
+          }
+
+          &.is-conflict {
+            background-color: #FFFDF5;
+          }
+
+          &.is-duplicate {
+            background-color: #FEF2F2;
+          }
+
+          td {
+            padding: 8px 10px;
+            vertical-align: top;
+
+            &.row-index {
+              text-align: center;
+              font-size: 0.75rem;
+              font-weight: 600;
+              color: #8C8D82;
+              padding-top: 15px;
+            }
+
+            &.num-cell {
+              text-align: right;
+            }
+
+            &.roas-cell {
+              text-align: right;
+              padding-top: 14px;
+
+              .roas-badge {
+                font-family: $font-heading;
+                font-size: 0.78rem;
+                font-weight: 700;
+                padding: 2px 7px;
+                border-radius: 4px;
+
+                &.has-value {
+                  background: #F4F4EE;
+                  color: #1A1A1A;
+                  border: 1px solid #E5E5DC;
+                }
+
+                &.empty {
+                  color: #8C8D82;
+                }
+              }
+            }
+
+            &.action-cell {
+              text-align: center;
+              padding-top: 12px;
+
+              .btn-remove-row {
+                background: transparent;
+                border: none;
+                color: #8C8D82;
+                cursor: pointer;
+                width: 28px;
+                height: 28px;
+                border-radius: 4px;
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+                transition: all $transition-fast;
+
+                &:hover:not(:disabled) {
+                  color: #DC2626;
+                  background-color: #FEE2E2;
+                }
+
+                &:disabled {
+                  opacity: 0.3;
+                  cursor: not-allowed;
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  /* Input fields inside table */
+  .bulk-input {
+    width: 100%;
+    height: 34px;
+    padding: 0 10px;
+    border: 1px solid #E5E5DC;
+    border-radius: $radius-sm;
+    font-size: 0.82rem;
+    font-family: $font-body;
+    color: #1A1A1A;
+    background: #FFFFFF;
+    box-sizing: border-box;
+    transition: border-color $transition-fast;
+
+    &:focus {
+      outline: none;
+      border-color: #000000;
+      box-shadow: 0 0 0 2px rgba(242, 234, 26, 0.35);
+    }
+
+    &.has-error {
+      border-color: #EF4444;
+      background-color: #FEF2F2;
+    }
+
+    &.num-input {
+      text-align: right;
+      font-variant-numeric: tabular-nums;
+    }
+  }
+
+  .field-error-msg {
+    display: block;
+    font-size: 0.68rem;
+    color: #DC2626;
+    margin-top: 3px;
+    font-weight: 500;
+  }
+
+  .conflict-badge {
+    display: inline-block;
+    font-size: 0.68rem;
+    color: #854D0E;
+    background: #FEF9C3;
+    border: 1px solid #FDE047;
+    padding: 1px 5px;
+    border-radius: 3px;
+    margin-top: 4px;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+
+  /* Row Actions & Summary Bar */
+  .bulk-toolbar-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    flex-wrap: wrap;
+    padding: 4px 0;
+
+    .batch-summary-strip {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.8rem;
+      color: #5A5B52;
+      background: #FAFAF7;
+      border: 1px solid #E5E5DC;
+      padding: 6px 12px;
+      border-radius: $radius-sm;
+
+      .summary-item {
+        display: inline-flex;
+        align-items: baseline;
+        gap: 4px;
+
+        .label {
+          font-size: 0.72rem;
+          color: #8C8D82;
+        }
+
+        strong {
+          color: #1A1A1A;
+          font-variant-numeric: tabular-nums;
+        }
+
+        &.highlight strong {
+          color: #0E7490;
+        }
+      }
+
+      .summary-divider {
+        color: #D5D5CA;
+      }
+    }
+  }
+
+  /* Modal Footer */
+  .bulk-modal-footer {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 10px;
+    padding-top: 8px;
+    border-top: 1px solid #E5E5DC;
+  }
+}

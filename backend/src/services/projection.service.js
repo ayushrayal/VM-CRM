@@ -233,6 +233,119 @@ export const addOrUpdateDailyTracking = async (projectionId, dailyData, userId) 
   return projObj;
 };
 
+export const addBulkDailyTracking = async (projectionId, bulkData, userId) => {
+  const { entries, overwriteExisting = false } = bulkData;
+
+  const projection = await ProjectProjection.findById(projectionId);
+  if (!projection) {
+    throw new ApiError(404, 'Projection not found');
+  }
+
+  // 1. Validate dates belong to projection month & year and are real calendar dates
+  const daysInMonth = new Date(projection.year, projection.month, 0).getDate();
+  const batchSeen = new Set();
+
+  for (const entry of entries) {
+    const parts = entry.date.split('-').map(Number);
+    const [entryYear, entryMonth, entryDay] = parts;
+
+    if (entryYear !== projection.year || entryMonth !== projection.month) {
+      throw new ApiError(
+        400,
+        `Date '${entry.date}' does not belong to projection period (${String(projection.month).padStart(2, '0')}/${projection.year}).`
+      );
+    }
+
+    if (isNaN(entryDay) || entryDay < 1 || entryDay > daysInMonth) {
+      throw new ApiError(
+        400,
+        `Date '${entry.date}' is invalid. Day must be between 1 and ${daysInMonth} for this month.`
+      );
+    }
+
+    if (batchSeen.has(entry.date)) {
+      throw new ApiError(400, `Duplicate date '${entry.date}' found in submission batch.`);
+    }
+    batchSeen.add(entry.date);
+  }
+
+  // 2. Check for conflicts with existing dates in projection.dailyTracking
+  const existingMap = new Map();
+  projection.dailyTracking.forEach((item, index) => {
+    existingMap.set(item.date, index);
+  });
+
+  const conflictingDates = entries
+    .filter((e) => existingMap.has(e.date))
+    .map((e) => e.date);
+
+  if (conflictingDates.length > 0 && !overwriteExisting) {
+    throw new ApiError(
+      409,
+      `One or more dates already have existing daily entries: ${conflictingDates.join(', ')}. Please confirm overwrite or update existing records.`,
+      conflictingDates,
+      '',
+      'DATE_CONFLICT'
+    );
+  }
+
+  // 3. Process entries: create or update
+  let createdCount = 0;
+  let updatedCount = 0;
+
+  for (const entry of entries) {
+    const spend = Number(entry.actualSpend) || 0;
+    const revenue = Number(entry.actualRevenue) || 0;
+    const notes = (entry.notes || '').trim();
+
+    if (existingMap.has(entry.date)) {
+      const idx = existingMap.get(entry.date);
+      projection.dailyTracking[idx].actualSpend = spend;
+      projection.dailyTracking[idx].actualRevenue = revenue;
+      if (entry.notes !== undefined) {
+        projection.dailyTracking[idx].notes = notes;
+      }
+      projection.dailyTracking[idx].updatedAt = new Date();
+      updatedCount++;
+    } else {
+      projection.dailyTracking.push({
+        date: entry.date,
+        actualSpend: spend,
+        actualRevenue: revenue,
+        notes,
+        updatedAt: new Date()
+      });
+      existingMap.set(entry.date, projection.dailyTracking.length - 1);
+      createdCount++;
+    }
+  }
+
+  // 4. Sort daily entries chronologically
+  projection.dailyTracking.sort((a, b) => a.date.localeCompare(b.date));
+  projection.updatedBy = userId;
+  await projection.save();
+
+  // 5. Populate and recalculate projection metrics
+  const populated = await ProjectProjection.findById(projection._id)
+    .populate('client', 'name clientName code status baselineROAS currentROAS')
+    .populate('budgetHistory.updatedBy', 'name email');
+
+  const projObj = populated.toObject();
+  projObj.calculations = calculateProjectionMetrics(projObj);
+
+  broadcastEvent('PROJECTION_UPDATED', projObj);
+
+  return {
+    projection: projObj,
+    summary: {
+      createdCount,
+      updatedCount,
+      totalCount: entries.length,
+      conflictsResolved: conflictingDates.length
+    }
+  };
+};
+
 export const updateDailyTrackingEntry = async (projectionId, dailyId, updateData, userId) => {
   const projection = await ProjectProjection.findById(projectionId);
   if (!projection) {

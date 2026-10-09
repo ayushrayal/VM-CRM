@@ -25,6 +25,11 @@ export const addDailyTracking = async (id, data) => {
   return response?.data ?? response;
 };
 
+export const addBulkDailyTracking = async (id, data) => {
+  const response = await api.post(`/projections/${id}/daily/bulk`, data);
+  return response?.data ?? response;
+};
+
 export const updateDailyTracking = async (id, dailyId, data) => {
   const response = await api.patch(`/projections/${id}/daily/${dailyId}`, data);
   return response?.data ?? response;

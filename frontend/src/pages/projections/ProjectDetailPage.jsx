@@ -21,6 +21,7 @@ import {
   formatROAS,
   formatPercent
 } from '../../utils/formatUtils';
+import { BulkDailyTrackingModal } from './components/BulkDailyTrackingModal';
 import './ProjectDetailPage.scss';
 
 export const ProjectDetailPage = () => {
@@ -49,6 +50,9 @@ export const ProjectDetailPage = () => {
   });
   const [dailyFormErrors, setDailyFormErrors] = useState({});
   const [isSavingDaily, setIsSavingDaily] = useState(false);
+
+  // Bulk Daily Entry Modal
+  const [isBulkModalOpen, setIsBulkModalOpen] = useState(false);
 
   // Edit Targets Modal
   const [isEditTargetsOpen, setIsEditTargetsOpen] = useState(false);
@@ -145,6 +149,20 @@ export const ProjectDetailPage = () => {
     setEditingDailyId(entry._id);
     setDailyFormErrors({});
     setIsDailyModalOpen(true);
+  };
+
+  // Open Bulk Daily Performance Entry Modal
+  const handleOpenBulkDaily = () => {
+    setIsBulkModalOpen(true);
+  };
+
+  const handleBulkDailySuccess = (summary) => {
+    const created = summary?.createdCount || 0;
+    const updated = summary?.updatedCount || 0;
+    showToast(
+      `Bulk daily performance saved successfully (${created} created, ${updated} updated)`
+    );
+    fetchProjection();
   };
 
   // Submit Daily Actual Entry
@@ -571,9 +589,14 @@ export const ProjectDetailPage = () => {
               Log actual daily ad spend and revenue. System automatically recalculates month-to-date totals and forecasts.
             </p>
           </div>
-          <Button variant="primary" size="md" onClick={handleOpenAddDaily}>
-            + Log Daily Actual
-          </Button>
+          <div className="section-actions-group">
+            <Button variant="secondary" size="md" onClick={handleOpenAddDaily}>
+              + Log Single Day
+            </Button>
+            <Button variant="primary" size="md" onClick={handleOpenBulkDaily}>
+              Bulk Entry
+            </Button>
+          </div>
         </div>
 
         {!projection.dailyTracking || projection.dailyTracking.length === 0 ? (
@@ -582,9 +605,14 @@ export const ProjectDetailPage = () => {
             <p className="empty-sub">
               Add daily ad spend and revenue entries to compute actual ROAS and accurate month forecasts.
             </p>
-            <Button variant="secondary" size="md" onClick={handleOpenAddDaily}>
-              + Log First Daily Entry
-            </Button>
+            <div className="empty-actions-row">
+              <Button variant="secondary" size="md" onClick={handleOpenAddDaily}>
+                + Log Single Day
+              </Button>
+              <Button variant="primary" size="md" onClick={handleOpenBulkDaily}>
+                Bulk Entry
+              </Button>
+            </div>
           </div>
         ) : (
           <div className="daily-table-container">
@@ -895,6 +923,14 @@ export const ProjectDetailPage = () => {
           </div>
         </div>
       </Modal>
+
+      {/* BULK DAILY TRACKING MODAL */}
+      <BulkDailyTrackingModal
+        isOpen={isBulkModalOpen}
+        onClose={() => setIsBulkModalOpen(false)}
+        projection={projection}
+        onSuccess={handleBulkDailySuccess}
+      />
     </div>
   );
 };
